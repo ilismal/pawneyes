@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.pawneyes.chess.Position
 import com.pawneyes.chess.isLegal
+import com.pawneyes.chess.legalMoves
 import com.pawneyes.engine.Analysis
 import com.pawneyes.engine.StockfishEngine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,7 +55,9 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
                 .debounce(250)
                 .collectLatest { p ->
                     try {
-                        if (p == null || !p.isLegal()) engine.value?.stop()
+                        // Sin jugadas legales (mate o ahogado) no hay nada que analizar:
+                        // el panel muestra el resultado sin el motor.
+                        if (p == null || !p.isLegal() || p.legalMoves().isEmpty()) engine.value?.stop()
                         else ensureEngine().analyze(p)
                     } catch (e: Exception) {
                         Log.e("Pawneyes", "error del motor", e)

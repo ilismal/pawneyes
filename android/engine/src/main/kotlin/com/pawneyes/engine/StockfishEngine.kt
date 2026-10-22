@@ -18,8 +18,11 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Estado del análisis de una posición: las mejores líneas, ordenadas. */
-data class Analysis(val position: Position, val lines: List<EngineLine>) {
+/**
+ * Estado del análisis de una posición: las mejores líneas, ordenadas, y si el
+ * motor ya ha terminado (llegó a la profundidad máxima o se agotó la búsqueda).
+ */
+data class Analysis(val position: Position, val lines: List<EngineLine>, val done: Boolean = false) {
     val depth: Int get() = lines.firstOrNull()?.depth ?: 0
 }
 
@@ -28,7 +31,10 @@ data class Analysis(val position: Position, val lines: List<EngineLine>) {
  * El binario va en jniLibs como libstockfish.so: es el único sitio desde el
  * que Android deja ejecutar código nativo propio.
  */
-class StockfishEngine private constructor(private val process: Process) : AutoCloseable {
+class StockfishEngine private constructor(
+    private val process: Process,
+    private val maxDepth: Int,
+) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val writer = process.outputStream.bufferedWriter()
     private val mutex = Mutex()
@@ -37,6 +43,10 @@ class StockfishEngine private constructor(private val process: Process) : AutoCl
 
     @Volatile
     private var current: Position? = null
+
+    /** Posición cuya búsqueda ya se ha pedido parar por haber encontrado mate. */
+    @Volatile
+    private var stopping: Position? = null
 
     private val _analysis = MutableStateFlow<Analysis?>(null)
     val analysis: StateFlow<Analysis?> = _analysis.asStateFlow()
@@ -57,19 +67,32 @@ class StockfishEngine private constructor(private val process: Process) : AutoCl
     private fun onLine(line: String) {
         when {
             line == "uciok" || line == "readyok" -> handshake.trySend(line)
-            line.startsWith("bestmove") -> bestmoves.trySend(Unit)
+            line.startsWith("bestmove") -> {
+                // Fin de la búsqueda: si era la de la posición actual, se marca terminada.
+                val position = current
+                _analysis.value?.takeIf { it.position == position }?.let { _analysis.value = it.copy(done = true) }
+                bestmoves.trySend(Unit)
+            }
             else -> {
                 val info = Uci.parseInfo(line) ?: return
                 val position = current ?: return
-                val previous = _analysis.value?.takeIf { it.position == position }?.lines.orEmpty()
+                val previous = _analysis.value?.takeIf { it.position == position }
                 // Cada multipv llega por separado: se sustituye la de su número.
-                val lines = (previous.filter { it.multipv != info.multipv } + info).sortedBy { it.multipv }
-                _analysis.value = Analysis(position, lines)
+                val lines = (previous?.lines.orEmpty().filter { it.multipv != info.multipv } + info).sortedBy { it.multipv }
+                _analysis.value = Analysis(position, lines, previous?.done ?: false)
+                // Con un mate forzado ya confirmado, seguir afinando las demás líneas
+                // gasta batería sin aportar nada: se termina la búsqueda.
+                val best = lines.first()
+                if (best.mate != null && best.depth >= MATE_CONFIRM_DEPTH && stopping != position) {
+                    stopping = position
+                    send("stop")
+                }
             }
         }
     }
 
-    private fun send(command: String) {
+    // Se escribe desde el hilo lector (parada por mate) y desde analyze/stop.
+    private fun send(command: String) = synchronized(writer) {
         writer.write(command)
         writer.newLine()
         writer.flush()
@@ -100,7 +123,12 @@ class StockfishEngine private constructor(private val process: Process) : AutoCl
         current = null
     }
 
-    /** Analiza `position` indefinidamente; los resultados llegan por [analysis]. */
+    /**
+     * Analiza `position` hasta la profundidad máxima; los resultados llegan por
+     * [analysis]. No se usa `go infinite`: si la búsqueda se agota antes (un mate,
+     * un final sencillo), UCI obliga al motor a esperar un `stop` y Stockfish lo
+     * hace en un bucle activo, con un núcleo al 100 % sin hacer nada útil.
+     */
     suspend fun analyze(position: Position) = withContext(Dispatchers.IO) {
         mutex.withLock {
             stopSearch()
@@ -108,7 +136,7 @@ class StockfishEngine private constructor(private val process: Process) : AutoCl
             _analysis.value = Analysis(position, emptyList())
             current = position
             send("position fen ${position.toFen()}")
-            send("go infinite")
+            send("go depth $maxDepth")
         }
     }
 
@@ -129,13 +157,19 @@ class StockfishEngine private constructor(private val process: Process) : AutoCl
 
         private fun binary(context: Context) = File(context.applicationInfo.nativeLibraryDir, BINARY)
 
-        suspend fun start(context: Context, lines: Int = 3): StockfishEngine {
+        /** Profundidad máxima por defecto: de sobra para posiciones de libro, y acotada en batería. */
+        const val DEFAULT_DEPTH = 40
+
+        /** Profundidad a la que se da por bueno un mate y se para la búsqueda. */
+        const val MATE_CONFIRM_DEPTH = 20
+
+        suspend fun start(context: Context, lines: Int = 3, maxDepth: Int = DEFAULT_DEPTH): StockfishEngine {
             val exe = binary(context)
             check(exe.canExecute()) { "Stockfish no está disponible en este dispositivo" }
             val process = withContext(Dispatchers.IO) {
                 ProcessBuilder(exe.path).redirectErrorStream(true).start()
             }
-            val engine = StockfishEngine(process)
+            val engine = StockfishEngine(process, maxDepth)
             // Deja núcleos libres para la interfaz; la tabla hash, modesta para el móvil.
             val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(1, 4)
             try {

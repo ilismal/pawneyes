@@ -150,6 +150,9 @@ fun Position.legalMoves(): List<Move> = pseudoLegalMoves().filter { !play(it).is
 
 fun Position.isCheckmate(): Boolean = isInCheck(sideToMove) && legalMoves().isEmpty()
 
+/** Tablas por ahogado: el bando que mueve no está en jaque y no tiene jugadas. */
+fun Position.isStalemate(): Boolean = !isInCheck(sideToMove) && legalMoves().isEmpty()
+
 /** Notación algebraica: Cf3, exd5, Txe8+, O-O, e8=D#… */
 fun Position.toSan(move: Move, letters: PieceLetters = PieceLetters.SPANISH): String {
     val piece = requireNotNull(this[move.from])

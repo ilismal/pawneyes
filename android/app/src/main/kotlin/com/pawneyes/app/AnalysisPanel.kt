@@ -21,7 +21,9 @@ import androidx.compose.ui.unit.dp
 import com.pawneyes.chess.Move
 import com.pawneyes.chess.Position
 import com.pawneyes.chess.Side
+import com.pawneyes.chess.isCheckmate
 import com.pawneyes.chess.isLegal
+import com.pawneyes.chess.isStalemate
 import com.pawneyes.chess.lineToSan
 import com.pawneyes.engine.Analysis
 import com.pawneyes.engine.EngineLine
@@ -73,14 +75,25 @@ fun AnalysisPanel(
             error != null -> Text(stringResource(R.string.analysis_error, error), color = MaterialTheme.colorScheme.error)
             !position.isLegal() -> Text(stringResource(R.string.analysis_illegal), color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall)
+            // Partida terminada: no se lanza el motor.
+            position.isCheckmate() -> {
+                val winner = if (position.sideToMove == Side.WHITE) R.string.side_black_short else R.string.side_white_short
+                Text(stringResource(R.string.analysis_checkmate, stringResource(winner)),
+                    style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            }
+            position.isStalemate() -> Text(stringResource(R.string.analysis_stalemate),
+                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             current == null -> Text(stringResource(R.string.analysis_thinking), style = MaterialTheme.typography.bodySmall)
             else -> {
                 val side = position.sideToMove
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(headline(current.lines.first(), side), style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.analysis_depth, current.depth), style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(bottom = 4.dp))
+                    Text(
+                        stringResource(if (current.done) R.string.analysis_depth_done else R.string.analysis_depth, current.depth),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
                 }
                 Text(stringResource(R.string.analysis_tap_line), style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)

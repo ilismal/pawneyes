@@ -43,6 +43,21 @@ class StockfishEngineTest {
             assertEquals(1, m.lines.first().mate)
             assertEquals("a1a8", m.lines.first().pv.first())
             assertEquals(mate, engine.analysis.value!!.position)
+            // Con la búsqueda acotada, un mate en 1 termina enseguida (antes se quedaba
+            // esperando un stop con un núcleo al 100 %).
+            val finished = engine.until(mate) { it.done }
+            assertTrue(finished.lines.first().mate == 1)
+
+            // Mate del pastor con 3 líneas: las otras dos son posiciones complejas, pero
+            // en cuanto el mate se confirma a profundidad 20 la búsqueda termina.
+            val pastor = Position.fromFen("r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4")
+            val start = System.currentTimeMillis()
+            engine.analyze(pastor)
+            val p = engine.until(pastor) { it.done }
+            android.util.Log.i("StockfishTest", "pastor: terminado en ${System.currentTimeMillis() - start} ms, " +
+                "profundidad ${p.depth}, mate ${p.lines.first().mate}")
+            assertEquals(1, p.lines.first().mate)
+            assertTrue(System.currentTimeMillis() - start < 10_000)
             engine.stop()
         }
     }

@@ -71,6 +71,17 @@ class MovesTest {
     }
 
     @Test
+    fun checkmateAndStalemate() {
+        val mated = Position.fromFen("r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")
+        assertTrue(mated.isCheckmate())
+        assertTrue(!mated.isStalemate())
+        val stalemate = Position.fromFen("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1")
+        assertTrue(stalemate.isStalemate())
+        assertTrue(!stalemate.isCheckmate())
+        assertTrue(!Position.START.isCheckmate() && !Position.START.isStalemate())
+    }
+
+    @Test
     fun sanPawnsPromotionAndEnPassant() {
         val p = Position.fromFen("4k3/1P6/8/3pP3/8/8/8/4K3 w - d6 0 1")
         assertEquals("exd6", p.toSan(Move.fromUci("e5d6")!!))

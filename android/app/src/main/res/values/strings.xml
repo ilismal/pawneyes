@@ -19,6 +19,9 @@
     <string name="analysis_illegal">Corrige la posición para analizarla (mira los avisos más abajo).</string>
     <string name="analysis_error">El motor ha fallado: %1$s</string>
     <string name="analysis_depth">profundidad %1$d</string>
+    <string name="analysis_depth_done">profundidad %1$d · terminado</string>
+    <string name="analysis_checkmate">Jaque mate · ganan %1$s</string>
+    <string name="analysis_stalemate">Tablas por ahogado</string>
     <string name="analysis_mate">Mate en %1$d · ganan %2$s</string>
     <string name="analysis_tap_line">Toca una línea para recorrerla jugada a jugada.</string>
     <string name="explore_title">Recorriendo la línea</string>
