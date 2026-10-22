@@ -157,6 +157,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     }
                 }
             }
+            val context = LocalContext.current
             val explore = exploration
             if (explore != null) {
                 BackHandler { exploration = null }
@@ -170,11 +171,30 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         exploration = null
                     },
                     onClose = { exploration = null },
+                    // Se comparte la línea entera desde la posición de partida.
+                    onSharePgn = { Sharing.sharePgn(context, explore.line.start, explore.line.moves) },
+                    onShareImage = {
+                        val last = explore.line.moves.getOrNull(explore.index - 1)
+                        Sharing.shareImage(context, explore.position, editor.flipped, arrows,
+                            last?.let { setOf(it.from, it.to) } ?: emptySet())
+                    },
                     modifier = Modifier.padding(padding),
                     analysisPanel = panel,
                 )
             } else {
-                BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel) {
+                // Con el análisis activo, el PGN lleva también la mejor línea y su evaluación.
+                val best = analysis?.takeIf { analysisVm.enabled && it.position == editor.position }?.lines?.firstOrNull()
+                val share: @Composable () -> Unit = {
+                    val bestLine = best?.let { Line(editor.position, it.pv) }
+                    val comment = best?.let {
+                        stringResource(R.string.share_engine_comment, it.depth, it.whiteScore(editor.position.sideToMove))
+                    }
+                    ShareButton(
+                        onPgn = { Sharing.sharePgn(context, editor.position, bestLine?.moves.orEmpty(), comment) },
+                        onImage = { Sharing.shareImage(context, editor.position, editor.flipped, arrows) },
+                    )
+                }
+                BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share) {
                     ScanPanel(vm.state, editor.marked.size, onDismiss = vm::dismiss)
                 }
             }

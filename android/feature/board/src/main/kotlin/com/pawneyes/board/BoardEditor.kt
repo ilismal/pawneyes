@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -148,6 +149,7 @@ fun BoardEditor(
     modifier: Modifier = Modifier,
     arrows: List<Pair<Int, Int>> = emptyList(),
     belowBoard: @Composable () -> Unit = {},
+    shareButton: @Composable () -> Unit = {},
     header: @Composable () -> Unit = {},
 ) {
     Column(
@@ -175,7 +177,7 @@ fun BoardEditor(
         }
         FenField(state)
         Issues(state.position)
-        Exports(state.position)
+        Exports(state.position, shareButton)
     }
 }
 
@@ -319,17 +321,18 @@ private fun Issues(position: Position) {
 }
 
 @Composable
-private fun Exports(position: Position) {
+private fun Exports(position: Position, shareButton: @Composable () -> Unit) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val fen = position.toFen()
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = {
             scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("FEN", fen))) }
         }) { Text(stringResource(R.string.copy_fen)) }
         Button(onClick = { uriHandler.openUri("https://lichess.org/analysis/" + fen.replace(' ', '_')) }) {
             Text(stringResource(R.string.open_lichess))
         }
+        shareButton()
     }
 }

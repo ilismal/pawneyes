@@ -44,6 +44,8 @@ fun LineExplorer(
     onStep: (Int) -> Unit,
     onEdit: () -> Unit,
     onClose: () -> Unit,
+    onSharePgn: () -> Unit,
+    onShareImage: () -> Unit,
     modifier: Modifier = Modifier,
     analysisPanel: @Composable () -> Unit,
 ) {
@@ -92,6 +94,7 @@ fun LineExplorer(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onClose) { Text(stringResource(R.string.explore_back)) }
             Button(onClick = onEdit) { Text(stringResource(R.string.explore_edit)) }
+            ShareButton(onSharePgn, onShareImage)
         }
     }
 }

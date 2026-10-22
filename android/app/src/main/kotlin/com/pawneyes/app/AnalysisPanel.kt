@@ -37,7 +37,7 @@ fun Analysis?.bestArrow(position: Position): List<Pair<Int, Int>> {
 }
 
 /** Puntuación desde el punto de vista de las blancas: «+0,27», «−1,50», «M3», «−M2». */
-private fun EngineLine.whiteScore(sideToMove: Side): String {
+fun EngineLine.whiteScore(sideToMove: Side): String {
     val sign = if (sideToMove == Side.WHITE) 1 else -1
     mate?.let { m ->
         val forWhite = m * sign
