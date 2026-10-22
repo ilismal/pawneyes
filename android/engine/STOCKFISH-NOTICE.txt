@@ -1,0 +1,3 @@
+Stockfish 19 (https://stockfishchess.org), compilación oficial stockfish-android-arm64-universal.
+Licencia GPLv3: ver STOCKFISH-LICENSE.txt. Si se distribuye la app, hay que cumplirla
+(ofrecer el código fuente de Stockfish y mantener este aviso).

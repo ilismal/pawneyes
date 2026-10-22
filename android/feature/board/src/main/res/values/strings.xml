@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="side_white">Blancas</string>
+    <string name="side_black">Negras</string>
+    <string name="side_to_move">Turno</string>
+    <string name="castling">Enroques</string>
+    <string name="castling_white_kingside">O-O blancas</string>
+    <string name="castling_white_queenside">O-O-O blancas</string>
+    <string name="castling_black_kingside">O-O negras</string>
+    <string name="castling_black_queenside">O-O-O negras</string>
+    <string name="eraser">Borrar casilla</string>
+    <string name="action_flip">Girar</string>
+    <string name="action_clear">Vaciar</string>
+    <string name="action_start">Inicial</string>
+    <string name="action_undo">Deshacer</string>
+    <string name="fen_label">FEN</string>
+    <string name="fen_load">Cargar</string>
+    <string name="fen_invalid">FEN no válido: %1$s</string>
+    <string name="copy_fen">Copiar FEN</string>
+    <string name="open_lichess">Abrir en Lichess</string>
+    <string name="position_ok">Posición válida</string>
+    <string name="issue_kings">%1$s: %2$d reyes (tiene que haber 1)</string>
+    <string name="issue_pawn_back_rank">Peón en %1$s: no puede haber peones en la 1ª ni en la 8ª fila</string>
+    <string name="issue_too_many_pawns">%1$s: %2$d peones (máximo 8)</string>
+    <string name="issue_too_many_pieces">%1$s: %2$d piezas (máximo 16)</string>
+    <string name="issue_opponent_in_check">%1$s están en jaque pero no les toca mover</string>
+    <string name="issue_castling">Enroque %1$s sin el rey o la torre en su casilla inicial</string>
+    <string name="issue_en_passant">La captura al paso en %1$s no es posible</string>
+</resources>

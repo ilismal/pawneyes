@@ -1,0 +1,12 @@
+[project]
+name = "pawneyes-ml"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "ai-edge-litert>=2.3.0",
+    "litert-torch>=0.10.0",
+    "numpy",
+    "opencv-python-headless",
+    "resvg-py>=0.5.0",
+    "torch>=2.14.1",
+]

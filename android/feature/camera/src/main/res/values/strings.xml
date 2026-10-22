@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="camera_searching">Encuadra el diagrama, de frente y con buena luz</string>
+    <string name="camera_hold_still">Mantén el móvil quieto…</string>
+    <string name="camera_capturing">Haciendo la foto…</string>
+    <string name="camera_shoot">Hacer foto</string>
+    <string name="camera_close">Cerrar</string>
+    <string name="camera_permission">Pawneyes necesita la cámara para fotografiar el diagrama. También puedes cerrar y elegir una foto de la galería.</string>
+    <string name="camera_permission_retry">Dar permiso</string>
+</resources>

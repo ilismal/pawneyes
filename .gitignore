@@ -1,0 +1,22 @@
+# --- Datos personales: fotos de libros (derechos de autor y posible GPS en EXIF) ---
+ejemplos/
+entrenamiento/
+fixtures/
+
+# --- Python (ml/) ---
+ml/.venv/
+ml/out/
+__pycache__/
+*.pyc
+# Juegos de piezas de Lichess: licencias variadas, se descargan con synth/download_pieces.py
+ml/assets/pieces/
+ml/assets/pieces_png/
+# Modelos: solo se versiona el definitivo (square_net.pt y su export .tflite)
+ml/models/*
+!ml/models/square_net.pt
+!ml/models/square_net.tflite
+
+# --- macOS / editores ---
+.DS_Store
+.idea/
+.vscode/

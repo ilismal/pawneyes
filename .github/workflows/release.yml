@@ -1,0 +1,55 @@
+# Al publicar una etiqueta vX.Y.Z, compila la APK firmada y la adjunta a la
+# release de GitHub (de ahí la descarga Obtainium).
+#
+# Secretos necesarios (Settings → Secrets and variables → Actions):
+#   KEYSTORE_BASE64    base64 de android/release.jks
+#   KEYSTORE_PASSWORD  contraseña del almacén
+#   KEY_ALIAS          alias de la clave (pawneyes)
+#   KEY_PASSWORD       contraseña de la clave
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Clave de firma
+        working-directory: android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+          printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+
+      - name: Tests y APK
+        working-directory: android
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ./gradlew --no-daemon :core:chess:test :vision:testReleaseUnitTest :engine:testReleaseUnitTest \
+            :feature:camera:testReleaseUnitTest :app:assembleRelease \
+            -PversionName="$VERSION" -PversionCode="${{ github.run_number }}"
+          cp app/build/outputs/apk/release/app-release.apk "../pawneyes-$VERSION.apk"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: pawneyes-*.apk
+          generate_release_notes: true
