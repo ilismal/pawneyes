@@ -26,7 +26,14 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: android-actions/setup-android@v3
+      # El runner ya trae el SDK de Android; solo faltan las licencias y la plataforma.
+      # (android-actions/setup-android@v3 falla: intenta instalar el paquete «tools»,
+      # que ya no existe.)
+      - name: SDK de Android
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" > /dev/null
 
       - name: Clave de firma
         working-directory: android
