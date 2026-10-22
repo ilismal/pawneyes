@@ -7,6 +7,7 @@ import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.exifinterface.media.ExifInterface
 import com.pawneyes.vision.VisionSpec
 import kotlin.math.max
@@ -27,6 +28,7 @@ object PhotoLoader {
         return sample
     }
 
+    @RequiresApi(Build.VERSION_CODES.P)
     private fun loadWithImageDecoder(context: Context, uri: Uri): Bitmap {
         // ImageDecoder ya aplica la orientación EXIF.
         val source = ImageDecoder.createSource(context.contentResolver, uri)

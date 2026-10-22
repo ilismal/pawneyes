@@ -5,7 +5,6 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import org.json.JSONObject
 import org.junit.Assume.assumeTrue
 import org.junit.BeforeClass
 import org.junit.Test
@@ -27,12 +26,10 @@ class ScanBenchmarkTest {
 
     @Test
     fun timeEachStep() {
-        // Los fixtures salen de fotos propias que no se publican: sin ellos, se omite.
-        assumeTrue("sin fixtures (ver README)", "manifest.json" in context.assets.list("").orEmpty())
-        val manifest = JSONObject(context.assets.open("manifest.json").bufferedReader().readText())
-        val boards = manifest.getJSONArray("boards").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
-        val photos = boards.map { b ->
-            val bitmap = context.assets.open(b.getString("photo")).use {
+        val boards = VisionParityTest.fixtureBoards(context)
+        assumeTrue("sin fixtures", boards.isNotEmpty())
+        val photos = boards.map { (dir, b) ->
+            val bitmap = context.assets.open("$dir/${b.getString("photo")}").use {
                 BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inScaled = false })!!
             }
             Mat().also { Utils.bitmapToMat(bitmap, it) }

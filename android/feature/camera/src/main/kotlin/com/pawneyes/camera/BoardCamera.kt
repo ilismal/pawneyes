@@ -15,7 +15,9 @@ import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
+import androidx.annotation.OptIn
 import androidx.camera.view.PreviewView
+import androidx.camera.view.TransformExperimental
 import androidx.camera.view.transform.CoordinateTransform
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -96,6 +98,7 @@ fun BoardCamera(onCaptured: (Bitmap) -> Unit, onClose: () -> Unit, modifier: Mod
     }
 }
 
+@OptIn(TransformExperimental::class)
 @Composable
 private fun CameraContent(onCaptured: (Bitmap) -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current

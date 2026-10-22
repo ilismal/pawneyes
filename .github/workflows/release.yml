@@ -19,21 +19,19 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
 
-      # El runner ya trae el SDK de Android; solo faltan las licencias y la plataforma.
-      # (android-actions/setup-android@v3 falla: intenta instalar el paquete «tools»,
-      # que ya no existe.)
-      - name: SDK de Android
-        run: |
-          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
-          yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+      - uses: gradle/actions/setup-gradle@v6
+
+      # El runner ya trae el SDK; el plugin de Android descarga lo que falte
+      # (plataforma, build-tools) una vez aceptadas las licencias.
+      - name: Licencias del SDK de Android
+        run: yes | "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)" --licenses > /dev/null || true
 
       - name: Clave de firma
         working-directory: android
@@ -51,12 +49,12 @@ jobs:
         working-directory: android
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          ./gradlew --no-daemon :core:chess:test :vision:testReleaseUnitTest :engine:testReleaseUnitTest \
+          ./gradlew :core:chess:test :vision:testReleaseUnitTest :engine:testReleaseUnitTest \
             :feature:camera:testReleaseUnitTest :app:assembleRelease \
             -PversionName="$VERSION" -PversionCode="${{ github.run_number }}"
           cp app/build/outputs/apk/release/app-release.apk "../pawneyes-$VERSION.apk"
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: pawneyes-*.apk
           generate_release_notes: true

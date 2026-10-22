@@ -77,7 +77,8 @@ class StockfishEngine private constructor(private val process: Process) : AutoCl
 
     private suspend fun await(reply: String) {
         withTimeoutOrNull(10_000) {
-            while (handshake.receive() != reply) Unit
+            // Descarta cualquier otra respuesta hasta la esperada.
+            while (handshake.receive() != reply) continue
         } ?: error("Stockfish no responde («$reply»)")
     }
 

@@ -3,13 +3,12 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.pawneyes.app"
-    compileSdk = 35
+    compileSdk = 37
     defaultConfig {
         applicationId = "com.pawneyes.app"
         minSdk = 26
@@ -32,6 +31,7 @@ android {
             keyPassword = keystore.getProperty("keyPassword")
         }
     }
+    buildFeatures { resValues = true }  // app_name distinto para la versión de depuración
     buildTypes {
         debug {
             // Así la versión de depuración convive con la release en el mismo móvil.

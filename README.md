@@ -73,7 +73,8 @@ foto ─► detector del tablero (OpenCV) ─► tablero enderezado 512×512
 
 La implementación Android reproduce exactamente la de Python: hay tests que comparan cada paso
 (esquinas del detector, recorte, salidas del modelo, rotación y reglas) contra fixtures
-generados en Python.
+generados en Python. Los del repositorio (`fixtures-publicos/`) salen de diagramas sintéticos,
+así que el CI los ejecuta en cada cambio.
 
 **Precisión**: en mis 10 fotos de prueba (que no se publican, ver abajo) acierta el 99,4 % de las
 casillas y lee 8 de los 10 tableros sin ningún error. Funciona mejor con los libros que ha
@@ -90,6 +91,7 @@ android/            App (Kotlin, Jetpack Compose)
   feature/camera/   Cámara con detección en vivo y autocaptura
   app/              Pantallas, análisis y explorador de líneas
 ml/                 Python: generador sintético, detector, entrenamiento y exportación
+fixtures-publicos/  Fixtures sintéticos para los tests de paridad Python/Android
 ```
 
 ## Compilar
@@ -102,6 +104,7 @@ Necesitas JDK 21 y el SDK de Android (lo más cómodo: Android Studio).
 cd android
 ./gradlew :app:assembleDebug          # APK de depuración en app/build/outputs/apk/debug/
 ./gradlew :core:chess:test            # tests JVM
+./gradlew :vision:connectedDebugAndroidTest   # paridad con Python, en un móvil o emulador
 ```
 
 Stockfish se descarga automáticamente de su release oficial la primera vez (y se comprueba su
@@ -126,8 +129,11 @@ uv run python -m export.export_tflite        # exportar a TFLite y comprobar que
 Las fotos de evaluación (`ejemplos/`), las del ajuste fino (`entrenamiento/`) y los fixtures que
 salen de ellas (`fixtures/`) **no se publican**: son páginas de libros con derechos de autor.
 Para usar las tuyas, pon fotos con su `.fen` (solo la parte de piezas) en `ejemplos/` y genera
-los fixtures con `uv run python -m export.fixtures`. Sin fixtures, los tests de paridad
-Python/Android simplemente se omiten.
+los fixtures con `uv run python -m export.fixtures`; los tests los usarán además de los públicos.
+
+Los fixtures públicos se regeneran (de forma determinista) con
+`uv run python -m export.public_fixtures`, tras descargar y rasterizar las piezas. Solo usan
+juegos de piezas con licencias libres (Apache 2.0, MIT, CC0).
 
 ## Licencia
 

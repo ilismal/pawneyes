@@ -1,6 +1,6 @@
 [versions]
-# Versiones ya presentes en la caché local de Gradle de este Mac (AGP 8.7 ⇄ Gradle 8.9).
-agp = "8.7.3"
+# AGP 9 trae Kotlin integrado: los módulos Android no aplican kotlin-android.
+agp = "9.4.1"
 kotlin = "2.4.21"
 composeBom = "2024.10.01"
 activityCompose = "1.9.3"

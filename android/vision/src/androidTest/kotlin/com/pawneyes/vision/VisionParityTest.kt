@@ -10,7 +10,6 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
@@ -27,14 +26,11 @@ import org.opencv.imgproc.Imgproc
 @RunWith(AndroidJUnit4::class)
 class VisionParityTest {
     private val context = InstrumentationRegistry.getInstrumentation().context
-    private val boards: List<JSONObject> by lazy {
-        val manifest = JSONObject(context.assets.open("manifest.json").bufferedReader().readText())
-        manifest.getJSONArray("boards").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
-    }
+    /** (carpeta, tablero) de los fixtures públicos y, si se incluyeron, los privados. */
+    private val boards: List<Pair<String, JSONObject>> = fixtureBoards(context)
 
-    // Los fixtures salen de fotos propias que no se publican: sin ellos, se omite.
     @Before
-    fun requireFixtures() = assumeTrue("sin fixtures (ver README)", "manifest.json" in context.assets.list("").orEmpty())
+    fun requireFixtures() = assertTrue("faltan fixtures-publicos/", boards.isNotEmpty())
 
     private fun rgba(asset: String): Mat {
         val bitmap = context.assets.open(asset).use {
@@ -54,9 +50,9 @@ class VisionParityTest {
     fun cropMatchesPython() {
         var worst = 0
         var differing = 0
-        for (b in boards) {
-            val mine = SquareCropper.crop(gray(b.getString("board")))
-            val theirs = bytes(b.getString("squares"))
+        for ((dir, b) in boards) {
+            val mine = SquareCropper.crop(gray("$dir/${b.getString("board")}"))
+            val theirs = bytes("$dir/${b.getString("squares")}")
             assertEquals(theirs.size, mine.size)
             for (i in mine.indices) {
                 val d = abs((mine[i].toInt() and 0xFF) - (theirs[i].toInt() and 0xFF))
@@ -72,8 +68,8 @@ class VisionParityTest {
     fun classifierMatchesPython() {
         SquareClassifier.fromAssets(context).use { model ->
             var worst = 0.0
-            for (b in boards) {
-                val logits = model.logits(bytes(b.getString("squares")))
+            for ((dir, b) in boards) {
+                val logits = model.logits(bytes("$dir/${b.getString("squares")}"))
                 val expected = b.getJSONArray("logits").getJSONArray(0)
                 for (sq in 0 until 64) for (c in 0 until 13) {
                     worst = maxOf(worst, abs(logits[sq][c] - expected.getJSONArray(sq).getDouble(c)))
@@ -87,9 +83,9 @@ class VisionParityTest {
     @Test
     fun detectorMatchesPython() {
         var worst = 0.0
-        for (b in boards) {
-            val name = b.getString("name")
-            val detection = BoardDetector.detect(rgba(b.getString("photo")))
+        for ((dir, b) in boards) {
+            val name = "$dir/${b.getString("name")}"
+            val detection = BoardDetector.detect(rgba("$dir/${b.getString("photo")}"))
             assertNotNull("$name: sin tablero", detection)
             val expected = b.getJSONArray("quad")
             var dist = 0.0
@@ -107,9 +103,9 @@ class VisionParityTest {
     fun scanMatchesPython() {
         Scanner(SquareClassifier.fromAssets(context)).use { scanner ->
             var same = 0
-            for (b in boards) {
-                val name = b.getString("name")
-                val result = scanner.scan(rgba(b.getString("photo")))
+            for ((dir, b) in boards) {
+                val name = "$dir/${b.getString("name")}"
+                val result = scanner.scan(rgba("$dir/${b.getString("photo")}"))
                 assertNotNull("$name: sin tablero", result)
                 val placement = result!!.position.placement()
                 val ok = placement == b.getString("placement") && result.reading.rotation == b.getInt("rotation")
@@ -122,6 +118,12 @@ class VisionParityTest {
 
     companion object {
         private const val TAG = "VisionParity"
+
+        fun fixtureBoards(context: android.content.Context): List<Pair<String, JSONObject>> =
+            listOf("publicos", "privados").filter { it in context.assets.list("").orEmpty() }.flatMap { dir ->
+                val m = JSONObject(context.assets.open("$dir/manifest.json").bufferedReader().readText())
+                m.getJSONArray("boards").let { a -> (0 until a.length()).map { dir to a.getJSONObject(it) } }
+            }
 
         @BeforeClass
         @JvmStatic

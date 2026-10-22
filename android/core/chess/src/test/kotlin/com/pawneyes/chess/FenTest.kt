@@ -5,7 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 class FenTest {
@@ -61,15 +60,19 @@ class FenTest {
         ).forEach { fen -> assertThrows(FenException::class.java) { Position.fromFen(fen) } }
     }
 
-    /** Las posiciones reales de los fixtures (generadas en Python) se leen y reescriben igual. */
+    /**
+     * Las posiciones de los fixtures (generadas en Python) se leen y reescriben igual.
+     * Siempre están los públicos (sintéticos); los privados, solo si existen en local.
+     */
     @Test
     fun fixturePlacementsRoundTrip() {
-        val manifest = File("../../../fixtures/manifest.json")
-        // Los fixtures salen de fotos propias que no se publican: sin ellos, se omite.
-        assumeTrue("sin fixtures (ver README)", manifest.exists())
-        val placements = Regex("\"(?:truth|placement)\": \"([^\"]+)\"")
-            .findAll(manifest.readText()).map { it.groupValues[1] }.toList()
-        assertTrue(placements.size >= 20)
+        val manifests = listOf("../../../fixtures-publicos", "../../../fixtures")
+            .map { File(it, "manifest.json") }.filter { it.exists() }
+        assertTrue("faltan fixtures-publicos/", manifests.isNotEmpty())
+        val placements = manifests.flatMap { m ->
+            Regex("\"(?:truth|placement)\": \"([^\"]+)\"").findAll(m.readText()).map { it.groupValues[1] }.toList()
+        }
+        assertTrue(placements.size >= 10)
         placements.forEach { assertEquals(it, Position.fromFen(it).placement()) }
     }
 }

@@ -2,6 +2,8 @@ package com.pawneyes.camera
 
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.annotation.OptIn
+import androidx.camera.view.TransformExperimental
 import androidx.camera.view.transform.ImageProxyTransformFactory
 import androidx.camera.view.transform.OutputTransform
 import com.pawneyes.vision.BoardDetector
@@ -17,6 +19,7 @@ import org.opencv.core.Mat
  * Galaxy S25 su matriz espera coordenadas del sensor completo (4080×3060), no
  * del fotograma de análisis, y el contorno salía encogido y desplazado.
  */
+@OptIn(TransformExperimental::class)
 class LiveBoardAnalyzer(
     private val onQuad: (quad: FloatArray?, frame: OutputTransform?) -> Unit,
 ) : ImageAnalysis.Analyzer {

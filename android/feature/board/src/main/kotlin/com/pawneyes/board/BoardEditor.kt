@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -293,10 +294,10 @@ private fun sideName(side: Side): String =
 
 @Composable
 private fun issueText(issue: Issue): String = when (issue) {
-    is Issue.KingCount -> stringResource(R.string.issue_kings, sideName(issue.side), issue.count)
+    is Issue.KingCount -> pluralStringResource(R.plurals.issue_kings, issue.count, sideName(issue.side), issue.count)
     is Issue.PawnOnBackRank -> stringResource(R.string.issue_pawn_back_rank, Square.name(issue.square))
-    is Issue.TooManyPawns -> stringResource(R.string.issue_too_many_pawns, sideName(issue.side), issue.count)
-    is Issue.TooManyPieces -> stringResource(R.string.issue_too_many_pieces, sideName(issue.side), issue.count)
+    is Issue.TooManyPawns -> pluralStringResource(R.plurals.issue_too_many_pawns, issue.count, sideName(issue.side), issue.count)
+    is Issue.TooManyPieces -> pluralStringResource(R.plurals.issue_too_many_pieces, issue.count, sideName(issue.side), issue.count)
     is Issue.OpponentInCheck -> stringResource(R.string.issue_opponent_in_check, sideName(issue.side))
     is Issue.CastlingWithoutPieces -> stringResource(R.string.issue_castling, stringResource(castlingLabel(issue.right)))
     is Issue.InvalidEnPassant -> stringResource(R.string.issue_en_passant, Square.name(issue.square))

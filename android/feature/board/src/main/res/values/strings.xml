@@ -19,10 +19,19 @@
     <string name="copy_fen">Copiar FEN</string>
     <string name="open_lichess">Abrir en Lichess</string>
     <string name="position_ok">Posición válida</string>
-    <string name="issue_kings">%1$s: %2$d reyes (tiene que haber 1)</string>
+    <plurals name="issue_kings">
+        <item quantity="one">%1$s: %2$d rey (tiene que haber 1)</item>
+        <item quantity="other">%1$s: %2$d reyes (tiene que haber 1)</item>
+    </plurals>
     <string name="issue_pawn_back_rank">Peón en %1$s: no puede haber peones en la 1ª ni en la 8ª fila</string>
-    <string name="issue_too_many_pawns">%1$s: %2$d peones (máximo 8)</string>
-    <string name="issue_too_many_pieces">%1$s: %2$d piezas (máximo 16)</string>
+    <plurals name="issue_too_many_pawns">
+        <item quantity="one">%1$s: %2$d peón (máximo 8)</item>
+        <item quantity="other">%1$s: %2$d peones (máximo 8)</item>
+    </plurals>
+    <plurals name="issue_too_many_pieces">
+        <item quantity="one">%1$s: %2$d pieza (máximo 16)</item>
+        <item quantity="other">%1$s: %2$d piezas (máximo 16)</item>
+    </plurals>
     <string name="issue_opponent_in_check">%1$s están en jaque pero no les toca mover</string>
     <string name="issue_castling">Enroque %1$s sin el rey o la torre en su casilla inicial</string>
     <string name="issue_en_passant">La captura al paso en %1$s no es posible</string>

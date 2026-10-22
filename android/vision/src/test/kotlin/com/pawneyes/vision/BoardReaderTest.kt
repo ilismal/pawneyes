@@ -4,15 +4,15 @@ import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assume.assumeTrue
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Con las salidas del modelo de los fixtures, Kotlin elige y corrige igual que Python. */
 class BoardReaderTest {
-    private val manifest = File("../../fixtures/manifest.json")
-    private val boards: List<JSONObject> by lazy {
-        JSONObject(manifest.readText()).getJSONArray("boards").let { arr -> (0 until arr.length()).map { arr.getJSONObject(it) } }
-    }
+    /** Fixtures públicos (sintéticos, siempre) y privados (fotos propias, si existen). */
+    private val boards: List<JSONObject> = listOf("../../fixtures-publicos", "../../fixtures")
+        .map { File(it, "manifest.json") }.filter { it.exists() }
+        .flatMap { m -> JSONObject(m.readText()).getJSONArray("boards").let { a -> (0 until a.length()).map { a.getJSONObject(it) } } }
 
     private fun logits(board: JSONObject): List<Array<FloatArray>> {
         val all = board.getJSONArray("logits")
@@ -24,8 +24,7 @@ class BoardReaderTest {
 
     @Test
     fun matchesPythonOnEveryFixture() {
-        // Los fixtures salen de fotos propias que no se publican: sin ellos, se omite.
-        assumeTrue("sin fixtures (ver README)", manifest.exists())
+        assertTrue("faltan fixtures-publicos/", boards.isNotEmpty())
         for (b in boards) {
             val reading = BoardReader.read(logits(b))
             val name = b.getString("name")

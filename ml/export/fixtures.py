@@ -1,6 +1,9 @@
 """Genera fixtures/ para comprobar que la implementación Android da lo mismo que Python.
 
-  cd ml && uv run python -m export.fixtures
+  cd ml && uv run python -m export.fixtures                    # ejemplos/ -> fixtures/ (privados)
+  cd ml && uv run python -m export.fixtures --src DIR --out DIR
+
+Los fixtures públicos (sintéticos, versionados) se generan con export.public_fixtures.
 
 Por cada foto de ejemplos/ en la que el detector encuentra tablero:
   <nombre>.photo.png    la foto reducida a PHOTO_PX de lado largo, en color (entrada
@@ -17,6 +20,7 @@ y en manifest.json, para cada una:
   truth          posición real (del .fen)
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -37,13 +41,15 @@ MODEL = ROOT / "ml" / "models" / "square_net.tflite"
 PHOTO_PX = 1200  # = detect.board.WORK_SIZE: el detector trabaja a esta escala
 
 
-def main() -> None:
-    FIXTURES.mkdir(exist_ok=True)
+def generate(src: Path, out: Path) -> None:
+    """Fixtures de cada foto de `src` con su .fen (fotos .jpg o .png)."""
+    out.mkdir(parents=True, exist_ok=True)
     tfl = TFLiteModel(MODEL)
     items = []
-    for fen in sorted(EXAMPLES.glob("*.fen")):
+    for fen in sorted(src.glob("*.fen")):
         stem = fen.stem.replace(" ", "_")
-        img = cv2.imread(str(fen.with_suffix(".jpg")))
+        photo_file = next(p for p in (fen.with_suffix(".jpg"), fen.with_suffix(".png")) if p.exists())
+        img = cv2.imread(str(photo_file))
         f = PHOTO_PX / max(img.shape[:2])
         photo = cv2.resize(img, None, fx=f, fy=f, interpolation=cv2.INTER_AREA)
         found = find_board_quad(photo)
@@ -53,10 +59,10 @@ def main() -> None:
         quad = found[0]
         board = cv2.cvtColor(warp_board(photo, quad), cv2.COLOR_BGR2GRAY)
         truth = placement_to_labels(fen.read_text().split()[0])
-        cv2.imwrite(str(FIXTURES / f"{stem}.photo.png"), photo)
-        cv2.imwrite(str(FIXTURES / f"{stem}.board.png"), board)
+        cv2.imwrite(str(out / f"{stem}.photo.png"), photo)
+        cv2.imwrite(str(out / f"{stem}.board.png"), board)
         squares = crop_squares(board)
-        (FIXTURES / f"{stem}.squares.bin").write_bytes(squares.tobytes())
+        (out / f"{stem}.squares.bin").write_bytes(squares.tobytes())
 
         logits = []
         for k in range(4):
@@ -83,8 +89,16 @@ def main() -> None:
         "board_px": BOARD_PX, "input_px": INPUT_PX, "margin": MARGIN, "classes": CLASSES,
         "photo_px": PHOTO_PX, "model": MODEL.name, "boards": items,
     }
-    (FIXTURES / "manifest.json").write_text(json.dumps(manifest))
-    print(f"{len(items)} tableros en {FIXTURES}")
+    (out / "manifest.json").write_text(json.dumps(manifest))
+    print(f"{len(items)} tableros en {out}")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--src", type=Path, default=EXAMPLES)
+    ap.add_argument("--out", type=Path, default=FIXTURES)
+    args = ap.parse_args()
+    generate(args.src, args.out)
 
 
 if __name__ == "__main__":
