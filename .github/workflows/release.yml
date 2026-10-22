@@ -1,6 +1,10 @@
 # Al publicar una etiqueta vX.Y.Z, compila la APK firmada y la adjunta a la
 # release de GitHub (de ahí la descarga Obtainium).
 #
+# Las notas de la release son el mensaje de la etiqueta anotada, en Markdown:
+#   git tag -a v0.3.0 -F notas.md && git push origin v0.3.0
+# Si la etiqueta no trae notas, la release falla en vez de publicarse sin ellas.
+#
 # Secretos necesarios (Settings → Secrets and variables → Actions):
 #   KEYSTORE_BASE64    base64 de android/release.jks
 #   KEYSTORE_PASSWORD  contraseña del almacén
@@ -20,6 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Notas de la release (mensaje de la etiqueta)
+        run: |
+          git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          git tag -l --format='%(contents)' "$GITHUB_REF_NAME" | sed '/-----BEGIN PGP SIGNATURE-----/,$d' > notas.md
+          # Una etiqueta sin notas (o con solo el título) no se publica.
+          if [ "$(grep -c . notas.md)" -lt 2 ]; then
+            echo "::error::La etiqueta $GITHUB_REF_NAME no trae notas de la release (git tag -a $GITHUB_REF_NAME -F notas.md)"
+            exit 1
+          fi
 
       - uses: actions/setup-java@v6
         with:
@@ -58,4 +72,4 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           files: pawneyes-*.apk
-          generate_release_notes: true
+          body_path: notas.md
