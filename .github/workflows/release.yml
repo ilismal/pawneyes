@@ -49,8 +49,8 @@ jobs:
         working-directory: android
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          ./gradlew :core:chess:test :vision:testReleaseUnitTest :engine:testReleaseUnitTest \
-            :feature:camera:testReleaseUnitTest :app:assembleRelease \
+          ./gradlew :core:chess:test :vision:testDebugUnitTest :engine:testDebugUnitTest \
+            :feature:camera:testDebugUnitTest :app:assembleRelease \
             -PversionName="$VERSION" -PversionCode="${{ github.run_number }}"
           python3 scripts/check_16kb.py app/build/outputs/apk/release/app-release.apk
           cp app/build/outputs/apk/release/app-release.apk "../pawneyes-$VERSION.apk"
