@@ -8,9 +8,13 @@ plugins {
 }
 
 /**
- * Stockfish no se versiona (100 MB): se descarga de la release oficial, se
- * comprueba su huella y se empaqueta como libstockfish.so, porque Android solo
- * permite ejecutar binarios desde la carpeta de librerías nativas de la app.
+ * Stockfish no se versiona (100 MB): se descarga de GitHub, se comprueba su
+ * huella y se empaqueta como libstockfish.so, porque Android solo permite
+ * ejecutar binarios desde la carpeta de librerías nativas de la app.
+ *
+ * Se usa una compilación de desarrollo y no la 19 estable porque esta última
+ * no está alineada a páginas de 16 KB (no arrancaría en esos móviles). Pasar a
+ * la 20 estable cuando salga, comprobándolo con scripts/check_16kb.py.
  */
 abstract class FetchStockfish @Inject constructor(
     private val archives: ArchiveOperations,
@@ -45,9 +49,10 @@ abstract class FetchStockfish @Inject constructor(
 }
 
 val fetchStockfish = tasks.register<FetchStockfish>("fetchStockfish") {
-    url.set("https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-android-arm64-universal.tar.gz")
-    sha256.set("ebb24051aa4a222b4daaf049b882ecf1163d370c128fe02316602643f4d5e426")
-    archive.set(layout.buildDirectory.file("stockfish/stockfish-sf_19-android-arm64.tar.gz"))
+    val release = "stockfish-dev-20261017-effdc3fd"
+    url.set("https://github.com/official-stockfish/Stockfish/releases/download/$release/stockfish-android-arm64-universal.tar.gz")
+    sha256.set("cd2e02f65318fd797899f08125c6cfbfd5392baf22a91760bea6d1bfb7db1c7d")
+    archive.set(layout.buildDirectory.file("stockfish/$release-android-arm64.tar.gz"))
     outputDir.set(layout.buildDirectory.dir("generated/jniLibs/stockfish"))
 }
 

@@ -42,7 +42,7 @@ private fun EngineLine.whiteScore(sideToMove: Side): String {
         return (if (forWhite > 0) "M" else "−M") + kotlin.math.abs(forWhite)
     }
     val pawns = (cp ?: 0) * sign / 100.0
-    val text = String.format(Locale("es"), "%.2f", kotlin.math.abs(pawns))
+    val text = String.format(Locale.forLanguageTag("es"), "%.2f", kotlin.math.abs(pawns))
     return (if (pawns >= 0) "+" else "−") + text
 }
 

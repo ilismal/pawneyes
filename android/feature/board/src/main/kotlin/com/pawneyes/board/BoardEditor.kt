@@ -1,5 +1,6 @@
 package com.pawneyes.board
 
+import android.content.ClipData
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -31,17 +32,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -54,6 +56,7 @@ import com.pawneyes.chess.Position
 import com.pawneyes.chess.Side
 import com.pawneyes.chess.Square
 import com.pawneyes.chess.issues
+import kotlinx.coroutines.launch
 
 sealed interface EditTool {
     data class Place(val piece: Piece) : EditTool
@@ -317,11 +320,14 @@ private fun Issues(position: Position) {
 
 @Composable
 private fun Exports(position: Position) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val fen = position.toFen()
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = { clipboard.setText(AnnotatedString(fen)) }) { Text(stringResource(R.string.copy_fen)) }
+        Button(onClick = {
+            scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("FEN", fen))) }
+        }) { Text(stringResource(R.string.copy_fen)) }
         Button(onClick = { uriHandler.openUri("https://lichess.org/analysis/" + fen.replace(' ', '_')) }) {
             Text(stringResource(R.string.open_lichess))
         }

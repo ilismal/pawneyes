@@ -37,7 +37,7 @@
   girada o en perspectiva, y marca en rojo las casillas de las que no está seguro.
 - **Editor de posiciones**: colocar y quitar piezas, turno, enroques, FEN, deshacer, avisos de
   posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al bando que no mueve…).
-- **Análisis con Stockfish 19** dentro de la app: evaluación, las tres mejores líneas en notación
+- **Análisis con Stockfish** (compilación posterior a la 19) dentro de la app: evaluación, las tres mejores líneas en notación
   algebraica española (R, D, T, A, C) y una flecha con la mejor jugada.
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
 - Copiar el FEN o abrir la posición en Lichess.

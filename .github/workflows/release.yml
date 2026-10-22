@@ -52,6 +52,7 @@ jobs:
           ./gradlew :core:chess:test :vision:testReleaseUnitTest :engine:testReleaseUnitTest \
             :feature:camera:testReleaseUnitTest :app:assembleRelease \
             -PversionName="$VERSION" -PversionCode="${{ github.run_number }}"
+          python3 scripts/check_16kb.py app/build/outputs/apk/release/app-release.apk
           cp app/build/outputs/apk/release/app-release.apk "../pawneyes-$VERSION.apk"
 
       - uses: softprops/action-gh-release@v3

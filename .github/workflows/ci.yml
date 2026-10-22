@@ -30,6 +30,8 @@ jobs:
         run: >
           ./gradlew :core:chess:test :vision:testDebugUnitTest :engine:testDebugUnitTest
           :feature:camera:testDebugUnitTest lintDebug :app:assembleDebug
+      - name: Librerías nativas alineadas a 16 KB
+        run: python3 android/scripts/check_16kb.py android/app/build/outputs/apk/debug/app-debug.apk
       - name: Informes
         if: failure()
         uses: actions/upload-artifact@v7
