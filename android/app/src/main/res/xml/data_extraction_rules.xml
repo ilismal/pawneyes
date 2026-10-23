@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+: nada de la app va a la copia de seguridad en la nube de Google. El
+  historial y los escaneos para entrenar llevan fotos y miniaturas de páginas de
+  libros, y se quedan en el móvil (se exportan a mano desde el menú ⋮).
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+</data-extraction-rules>
