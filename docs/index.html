@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pawneyes</title>
+<meta name="description" content="App Android que escanea diagramas de ajedrez de libros con el móvil, los convierte en una posición editable y los analiza con Stockfish. Proyecto hobby, libre (GPLv3).">
+<meta property="og:title" content="Pawneyes">
+<meta property="og:description" content="Escanea con el móvil un diagrama de ajedrez de un libro, conviértelo en una posición editable y analízala con Stockfish.">
+<meta property="og:image" content="https://ilismal.github.io/pawneyes/icon.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="icon.png">
+<style>
+  :root {
+    --light: #f0d9b5;
+    --dark: #b58863;
+    --bg: #fbf8f3;
+    --surface: #ffffff;
+    --text: #2b2118;
+    --muted: #6b5b4c;
+    --accent: #8a5a32;
+    --accent-text: #ffffff;
+    --border: #e7ddd0;
+    --shadow: 0 10px 30px rgba(60, 40, 20, .10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17130f;
+      --surface: #221c16;
+      --text: #f1e9df;
+      --muted: #b9a993;
+      --accent: #d9a46c;
+      --accent-text: #1b140d;
+      --border: #3a3027;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+  /* Franja de tablero */
+  .board-strip {
+    height: 14px;
+    background: repeating-linear-gradient(90deg, var(--light) 0 14px, var(--dark) 14px 28px);
+  }
+
+  header.hero { padding: 64px 0 40px; text-align: center; }
+  .hero img.icon { width: 112px; height: 112px; border-radius: 26px; box-shadow: var(--shadow); }
+  .hero h1 { font-size: clamp(2.4rem, 6vw, 3.4rem); margin: 18px 0 6px; letter-spacing: -.02em; }
+  .hero p.tagline { font-size: 1.2rem; color: var(--muted); max-width: 640px; margin: 0 auto 28px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; }
+  .btn {
+    display: inline-block; padding: 12px 22px; border-radius: 999px; text-decoration: none;
+    font-weight: 600; border: 2px solid var(--accent);
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-text); }
+  .btn.secondary { color: var(--accent); }
+  .badge img { height: 54px; display: block; }
+  .requirements { margin-top: 16px; font-size: .92rem; color: var(--muted); }
+
+  .note {
+    background: var(--surface); border: 1px solid var(--border); border-left: 5px solid var(--dark);
+    border-radius: 12px; padding: 16px 20px; margin: 8px auto 48px; max-width: 760px; font-size: .96rem;
+  }
+
+  section { padding: 40px 0; }
+  h2 { font-size: 1.7rem; margin: 0 0 20px; letter-spacing: -.01em; }
+
+  .shots {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  }
+  figure { margin: 0; text-align: center; }
+  figure img {
+    width: 100%; height: auto; border-radius: 18px; border: 1px solid var(--border);
+    box-shadow: var(--shadow); background: var(--surface);
+  }
+  figcaption { font-size: .9rem; color: var(--muted); margin-top: 8px; }
+
+  .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .feature {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px;
+  }
+  .feature h3 { margin: 0 0 6px; font-size: 1.08rem; }
+  .feature p { margin: 0; color: var(--muted); font-size: .96rem; }
+
+  ol.pipeline { counter-reset: step; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  ol.pipeline li {
+    counter-increment: step; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 20px 16px 64px; position: relative;
+  }
+  ol.pipeline li::before {
+    content: counter(step); position: absolute; left: 18px; top: 16px; width: 32px; height: 32px;
+    border-radius: 6px; display: grid; place-items: center; font-weight: 700;
+    background: var(--dark); color: #fff;
+  }
+  ol.pipeline strong { display: block; }
+  ol.pipeline span { color: var(--muted); font-size: .96rem; }
+
+  .privacy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 28px 0 40px; color: var(--muted); font-size: .9rem;
+  }
+  footer p { margin: 6px 0; }
+
+  @media (max-width: 760px) {
+    .shots { grid-template-columns: repeat(2, 1fr); }
+    .features, .privacy { grid-template-columns: 1fr; }
+    header.hero { padding-top: 40px; }
+  }
+  @media (max-width: 420px) {
+    .shots { grid-template-columns: 1fr 1fr; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="board-strip" aria-hidden="true"></div>
+
+<header class="hero wrap">
+  <img class="icon" src="icon.png" alt="" width="112" height="112">
+  <h1>Pawneyes</h1>
+  <p class="tagline">Escanea con el móvil un diagrama de ajedrez de un libro, conviértelo en una posición editable y analízala con Stockfish.</p>
+  <div class="buttons">
+    <a class="btn primary" href="https://github.com/ilismal/pawneyes/releases/latest">Descargar la APK</a>
+    <a class="badge" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/ilismal/pawneyes">
+      <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Consíguelo en Obtainium">
+    </a>
+    <a class="btn secondary" href="https://github.com/ilismal/pawneyes">Código fuente</a>
+  </div>
+  <p class="requirements">Android 8.0 o superior en un móvil ARM64 (casi todos los actuales) · unos 72 MB · gratis y libre (GPLv3)</p>
+</header>
+
+<main class="wrap">
+  <p class="note">
+    <strong>Es un proyecto hobby para aprender</strong>: visión por ordenador, un clasificador entrenado
+    con datos sintéticos, Android con Compose y un motor de ajedrez. Funciona razonablemente con los libros
+    con los que lo he probado, pero no pretende competir con nada. Si lo que quieres es escanear diagramas
+    de verdad, mejor <a href="https://chessvision.ai">chessvision.ai</a> o aplicaciones similares.
+  </p>
+
+  <section aria-labelledby="capturas">
+    <h2 id="capturas">Así se ve</h2>
+    <div class="shots">
+      <figure><img src="screenshots/01-escaneo-y-analisis.png" alt="Diagrama escaneado y analizado" width="540" height="1200" loading="lazy"><figcaption>Escaneo y análisis</figcaption></figure>
+      <figure><img src="screenshots/02-explorar-linea.png" alt="Recorriendo una línea de Stockfish" width="540" height="1200" loading="lazy"><figcaption>Recorrer las líneas</figcaption></figure>
+      <figure><img src="screenshots/03-editor.png" alt="Editor de posiciones" width="540" height="1200" loading="lazy"><figcaption>Editor de posiciones</figcaption></figure>
+      <figure><img src="screenshots/04-ejercicio.png" alt="Modo ejercicio: jugada correcta" width="540" height="1200" loading="lazy"><figcaption>Modo ejercicio</figcaption></figure>
+      <figure><img src="screenshots/05-jugar-eleccion.png" alt="Elegir bando y rival para jugar" width="540" height="1200" loading="lazy"><figcaption>Elegir rival</figcaption></figure>
+      <figure><img src="screenshots/06-partida.png" alt="Partida contra Maia" width="540" height="1200" loading="lazy"><figcaption>Partida contra Maia</figcaption></figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="que-hace">
+    <h2 id="que-hace">Qué hace</h2>
+    <div class="features">
+      <div class="feature">
+        <h3>Escanea diagramas</h3>
+        <p>Desde la cámara (con autocaptura cuando el tablero se queda quieto), la galería o compartiendo una foto. Detecta el tablero aunque esté girado o en perspectiva y marca las casillas dudosas.</p>
+      </div>
+      <div class="feature">
+        <h3>Lee el texto de la página</h3>
+        <p>El turno, si el pie lo dice («Juegan las negras») o se deduce de la jugada impresa al lado, y si el diagrama está impreso desde el lado de las negras.</p>
+      </div>
+      <div class="feature">
+        <h3>Analiza con Stockfish</h3>
+        <p>Evaluación y las tres mejores líneas en notación algebraica española, con una flecha para la mejor jugada. Se pueden recorrer jugada a jugada.</p>
+      </div>
+      <div class="feature">
+        <h3>Modo ejercicio</h3>
+        <p>Busca la mejor jugada sin ver la evaluación: la app la compara con la de Stockfish y te dice si es correcta, una imprecisión o un error.</p>
+      </div>
+      <div class="feature">
+        <h3>Juega desde cualquier posición</h3>
+        <p>Contra Stockfish (de 1350 de Elo a plena fuerza) o contra <a href="https://maiachess.com">Maia</a>, una red entrenada para jugar como una persona de 1100 a 1900.</p>
+      </div>
+      <div class="feature">
+        <h3>Edita, guarda y comparte</h3>
+        <p>Editor con avisos de posiciones imposibles, historial de escaneos con etiquetas, y exportación a FEN, PGN, imagen o Lichess.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="como-funciona">
+    <h2 id="como-funciona">Cómo funciona</h2>
+    <ol class="pipeline">
+      <li><strong>Detector del tablero</strong><span>OpenCV: casillas oscuras agrupadas por vecindad diagonal y una homografía que endereza el tablero, aunque no tenga marco.</span></li>
+      <li><strong>Clasificador de casillas</strong><span>Una red pequeña (unos 300 000 parámetros, LiteRT) entrenada sobre todo con diagramas sintéticos: 25 juegos de piezas, estilos de casilla variados y fotos simuladas con perspectiva, curvatura, sombras y ruido.</span></li>
+      <li><strong>Rotación y legalidad</strong><span>Prueba las cuatro orientaciones y corrige lecturas imposibles (un rey de cada color, peones en la primera fila…) con la segunda opción del modelo.</span></li>
+      <li><strong>Texto de la página</strong><span>Con la misma homografía endereza la página de alrededor y la lee con Tesseract para sacar el turno y la orientación.</span></li>
+    </ol>
+    <p>Todo se prototipa primero en Python y la app Android reproduce exactamente el mismo resultado: hay tests que lo comprueban paso a paso con fixtures sintéticos en cada cambio.</p>
+  </section>
+
+  <section aria-labelledby="privacidad">
+    <h2 id="privacidad">Privacidad</h2>
+    <div class="privacy">
+      <div class="feature"><h3>Todo en el móvil</h3><p>El escaneo, el OCR y los motores funcionan sin conexión: la app ni siquiera tiene permiso de acceso a Internet. Sin cuentas, anuncios ni analítica.</p></div>
+      <div class="feature"><h3>Nada a la nube</h3><p>La app no entra en las copias de seguridad de Google: el historial y los escaneos se quedan en el dispositivo.</p></div>
+      <div class="feature"><h3>Código abierto</h3><p>Todo el código está en GitHub bajo GPLv3, para revisarlo o compilarlo tú mismo.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p><a href="https://github.com/ilismal/pawneyes">Pawneyes en GitHub</a> · <a href="https://github.com/ilismal/pawneyes/releases">Versiones</a> · <a href="https://github.com/ilismal/pawneyes/issues">Ideas y errores</a></p>
+  <p>Licencia GPLv3. Incluye <a href="https://stockfishchess.org">Stockfish</a> y las redes de <a href="https://github.com/CSSLab/maia-chess">Maia</a> (GPLv3), las piezas <a href="https://github.com/LexLuengas/chessnut-pieces">chessnut</a> de Alexis Luengas, OpenCV, LiteRT y Tesseract (Apache 2.0). Detalles en <a href="https://github.com/ilismal/pawneyes/blob/main/android/LICENSES.md">LICENSES.md</a>.</p>
+</footer>
+</body>
+</html>
