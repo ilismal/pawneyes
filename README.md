@@ -42,7 +42,8 @@
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
 - **Modo ejercicio**: busca la mejor jugada sin ver la evaluación; la app la compara con la de
   Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes).
-- Copiar el FEN o abrir la posición en Lichess.
+- Copiar el FEN, abrir la posición en Lichess o compartirla como PGN o como imagen.
+- **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
 
 Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La APK ocupa unos
 100 MB, la mayor parte por Stockfish y sus redes neuronales.
@@ -115,6 +116,30 @@ SHA-256). El modelo ya entrenado está en `ml/models/square_net.tflite`.
 Para una APK release firmada, crea `android/release.jks` y `android/keystore.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). El workflow
 `.github/workflows/release.yml` hace lo mismo en GitHub Actions al publicar una etiqueta `vX.Y.Z`.
+
+### Mejorar el modelo con tus escaneos
+
+El modelo acierta mejor con los libros que ha visto. Para enseñarle los tuyos:
+
+1. En la app, tras escanear un diagrama, corrige las casillas que hagan falta y pulsa
+   **«Guardar para entrenar»**. Se guarda la foto (reducida, ya derecha y sin metadatos EXIF
+   ni GPS) con la posición del tablero; no sale del móvil hasta que la exportes.
+2. Cuando tengas unas cuantas, en el menú ⋮, **«Exportar para entrenar»** y pásate el ZIP al
+   ordenador.
+3. Impórtalo y haz un ajuste fino:
+
+   ```sh
+   cd ml
+   uv run python -m train.import_scans ~/Downloads/pawneyes-entrenamiento-AAAAMMDD.zip
+   uv run python -m train.train --init models/square_net.pt --real-frac 0.3 \
+       --epochs 4 --lr 5e-4 --out models/ft
+   uv run python -m train.evaluate models/ft/square_net.pt   # compáralo con el actual
+   cp models/ft/square_net.pt models/square_net.pt
+   uv run python -m export.export_tflite                    # el modelo que usa la app
+   uv run python -m export.public_fixtures                  # fixtures de los tests
+   ```
+
+Con solo 7 fotos de un libro, sus diagramas pasaron de 10 casillas mal a ninguna.
 
 ### Modelo (opcional)
 

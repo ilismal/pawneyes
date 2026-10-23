@@ -27,6 +27,19 @@ object Sharing {
         context.startActivity(Intent.createChooser(send, context.getString(R.string.share_pgn)))
     }
 
+    /** El ZIP de escaneos guardados para entrenar (TrainingStore.exportZip). */
+    fun shareZip(context: Context, zip: File) {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", zip)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, zip.name)
+            clipData = ClipData.newRawUri(null, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send, context.getString(R.string.training_export_title)))
+    }
+
     fun shareImage(
         context: Context,
         position: Position,

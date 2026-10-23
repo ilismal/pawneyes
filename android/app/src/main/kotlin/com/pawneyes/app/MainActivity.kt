@@ -13,12 +13,17 @@ import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +42,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
@@ -57,6 +63,7 @@ import com.pawneyes.board.BoardEditorState
 import com.pawneyes.board.rememberBoardEditorState
 import com.pawneyes.camera.BoardCamera
 import com.pawneyes.chess.Line
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     /** Foto recibida con «Compartir», pendiente de escanear. */
@@ -144,6 +151,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                             onClick = { picker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
                             enabled = idle,
                         ) { Text(stringResource(R.string.scan_gallery)) }
+                        TrainingMenu(vm)
                     },
                 )
             },
@@ -214,7 +222,8 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     )
                 }
                 BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share) {
-                    ScanPanel(vm.state, editor.marked.size, onDismiss = vm::dismiss)
+                    ScanPanel(vm.state, editor.marked.size, onDismiss = vm::dismiss,
+                        onSaveForTraining = { vm.saveForTraining(editor.position.toFen()) })
                 }
             }
         }
@@ -229,7 +238,7 @@ private fun BoardEditorState.showScan(result: com.pawneyes.vision.ScanResult) {
 }
 
 @Composable
-private fun ScanPanel(state: ScanState, marked: Int, onDismiss: () -> Unit) {
+private fun ScanPanel(state: ScanState, marked: Int, onDismiss: () -> Unit, onSaveForTraining: () -> Unit) {
     when (state) {
         ScanState.Idle -> Unit
         ScanState.Scanning -> Row(
@@ -254,12 +263,59 @@ private fun ScanPanel(state: ScanState, marked: Int, onDismiss: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(stringResource(R.string.scan_hint), style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.hide)) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.hide)) }
+                        TextButton(onClick = onSaveForTraining, enabled = !state.saved) {
+                            Text(stringResource(if (state.saved) R.string.training_saved else R.string.training_save))
+                        }
+                    }
+                    if (!state.saved) {
+                        Text(stringResource(R.string.training_hint), style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
         ScanState.NoBoard -> Message(stringResource(R.string.scan_no_board), onDismiss)
         is ScanState.Failed -> Message(stringResource(R.string.scan_failed, state.message), onDismiss)
+    }
+}
+
+/** Menú ⋮: exportar o borrar los escaneos guardados para entrenar. */
+@Composable
+private fun TrainingMenu(vm: ScanViewModel) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var open by remember { mutableStateOf(false) }
+    var confirm by remember { mutableStateOf(false) }
+    val n = vm.trainingCount
+    Box {
+        IconButton(onClick = { open = true }) { Text("⋮", style = MaterialTheme.typography.titleLarge) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.training_export, n)) },
+                enabled = n > 0,
+                onClick = {
+                    open = false
+                    scope.launch { Sharing.shareZip(context, vm.exportTraining()) }
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.training_clear)) },
+                enabled = n > 0,
+                onClick = { open = false; confirm = true },
+            )
+        }
+    }
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            text = { Text(pluralStringResource(R.plurals.training_clear_confirm, n, n)) },
+            confirmButton = {
+                TextButton(onClick = { vm.clearTraining(); confirm = false }) { Text(stringResource(R.string.training_clear_yes)) }
+            },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.training_clear_no)) } },
+        )
     }
 }
 
