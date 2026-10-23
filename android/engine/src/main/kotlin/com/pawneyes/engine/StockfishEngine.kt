@@ -123,9 +123,10 @@ class StockfishEngine private constructor(
         } ?: error("Stockfish no responde («$reply»)")
     }
 
-    private suspend fun configure(threads: Int, hashMb: Int, lines: Int) = withContext(Dispatchers.IO) {
+    private suspend fun configure(threads: Int, hashMb: Int, lines: Int, net: File) = withContext(Dispatchers.IO) {
         send("uci")
         await("uciok")
+        send("setoption name EvalFile value ${net.path}")
         send("setoption name Threads value $threads")
         send("setoption name Hash value $hashMb")
         send("setoption name MultiPV value $lines")
@@ -219,9 +220,31 @@ class StockfishEngine private constructor(
         /** Profundidad a la que se da por bueno un mate y se para la búsqueda. */
         const val MATE_CONFIRM_DEPTH = 20
 
+        /**
+         * La red neuronal va como asset (no dentro del binario): se copia a disco la
+         * primera vez y tras cada actualización de la app, porque Stockfish la lee de un fichero.
+         */
+        private fun network(context: Context): File {
+            val name = context.assets.list("").orEmpty().single { it.startsWith("nn-") && it.endsWith(".nnue") }
+            val dir = File(context.noBackupFilesDir, "stockfish")
+            val file = File(dir, name)
+            val marker = File(dir, "version")
+            val installed = context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime.toString()
+            if (!file.exists() || !marker.exists() || marker.readText() != installed) {
+                dir.mkdirs()
+                dir.listFiles()?.filter { it.name.endsWith(".nnue") }?.forEach { it.delete() }  // redes de versiones anteriores
+                val tmp = File(dir, "$name.tmp")
+                context.assets.open(name).use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                check(tmp.renameTo(file)) { "no se pudo guardar la red de Stockfish" }
+                marker.writeText(installed)
+            }
+            return file
+        }
+
         suspend fun start(context: Context, lines: Int = 3, maxDepth: Int = DEFAULT_DEPTH): StockfishEngine {
             val exe = binary(context)
             check(exe.canExecute()) { "Stockfish no está disponible en este dispositivo" }
+            val net = withContext(Dispatchers.IO) { network(context) }
             val process = withContext(Dispatchers.IO) {
                 ProcessBuilder(exe.path).redirectErrorStream(true).start()
             }
@@ -229,7 +252,7 @@ class StockfishEngine private constructor(
             // Deja núcleos libres para la interfaz; la tabla hash, modesta para el móvil.
             val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(1, 4)
             try {
-                engine.configure(threads, hashMb = 64, lines = lines)
+                engine.configure(threads, hashMb = 64, lines = lines, net = net)
             } catch (e: Exception) {
                 engine.close()
                 throw e

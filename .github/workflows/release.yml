@@ -47,6 +47,11 @@ jobs:
       - name: Licencias del SDK de Android
         run: yes | "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)" --licenses > /dev/null || true
 
+      - name: NDK (para compilar Stockfish)
+        run: |
+          ndk=$(grep '^ndk = ' android/gradle/libs.versions.toml | cut -d'"' -f2)
+          "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)" --install "ndk;$ndk" > /dev/null
+
       - name: Clave de firma
         working-directory: android
         env:

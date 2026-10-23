@@ -25,6 +25,10 @@ jobs:
       # (plataforma, build-tools) una vez aceptadas las licencias.
       - name: Licencias del SDK de Android
         run: yes | "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)" --licenses > /dev/null || true
+      - name: NDK (para compilar Stockfish)
+        run: |
+          ndk=$(grep '^ndk = ' android/gradle/libs.versions.toml | cut -d'"' -f2)
+          "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)" --install "ndk;$ndk" > /dev/null
       - name: Tests JVM, lint y APK de depuración
         working-directory: android
         run: >

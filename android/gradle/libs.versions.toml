@@ -1,4 +1,6 @@
 [versions]
+# NDK para compilar Stockfish (engine/). El CI instala esta misma versión.
+ndk = "29.0.14206865"
 tesseract4android = "4.9.0"
 # AGP 9 trae Kotlin integrado: los módulos Android no aplican kotlin-android.
 agp = "9.4.1"

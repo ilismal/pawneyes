@@ -2,7 +2,7 @@
 
 | Componente | Autor | Licencia |
 |---|---|---|
-| Stockfish, compilación de desarrollo `effdc3fd` (posterior a la 19; se descarga al compilar) | Los autores de Stockfish | GPLv3 — ver `engine/STOCKFISH-LICENSE.txt` |
+| Stockfish 16 y su red `nn-5af11540bbfe.nnue` (se compilan y descargan al compilar la app) | Los autores de Stockfish | GPLv3 — ver `engine/STOCKFISH-LICENSE.txt` y `engine/STOCKFISH-NOTICE.txt` |
 | Piezas *chessnut* (`feature/board/src/main/res/drawable-nodpi/piece_*.png`) | Alexis Luengas | Apache 2.0 — https://github.com/LexLuengas/chessnut-pieces |
 | Maia 1 (redes 1100–1900, convertidas a LiteRT: `ml/models/maia/*.tflite`) | CSSLab, Universidad de Toronto | GPLv3 — https://github.com/CSSLab/maia-chess |
 | Tesseract4Android 4.9.0 (Tesseract 5) | Adaptech, Google y los autores de Tesseract | Apache 2.0 — https://github.com/adaptech-cz/Tesseract4Android |

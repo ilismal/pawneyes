@@ -48,7 +48,7 @@
   las coordenadas o, si no las hay, por los peones). Si se equivoca, se corrige con un toque.
 - **Editor de posiciones**: colocar y quitar piezas, turno, enroques, FEN, deshacer, avisos de
   posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al bando que no mueve…).
-- **Análisis con Stockfish** (compilación posterior a la 19) dentro de la app: evaluación, las tres mejores líneas en notación
+- **Análisis con Stockfish 16** dentro de la app: evaluación, las tres mejores líneas en notación
   algebraica española (R, D, T, A, C) y una flecha con la mejor jugada.
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
 - **Modo ejercicio**: busca la mejor jugada sin ver la evaluación; la app la compara con la de
@@ -60,7 +60,7 @@
 - **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
 
 Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La APK ocupa unos
-130 MB, la mayor parte por Stockfish y sus redes neuronales.
+72 MB, más de la mitad por la red neuronal de Stockfish.
 
 ## Instalación
 
@@ -111,7 +111,7 @@ visto en el ajuste fino; con estilos de pieza muy distintos se equivoca más.
 android/            App (Kotlin, Jetpack Compose)
   core/chess/       Posición, FEN, generador de jugadas (verificado con perft), notación
   vision/           Detector, recorte y clasificador (OpenCV 5 + LiteRT)
-  engine/           Stockfish por UCI (el binario se descarga al compilar)
+  engine/           Stockfish 16 por UCI (se compila con el NDK al compilar la app)
   maia/             Maia 1 en LiteRT: codificación de lc0 y elección de jugada
   feature/board/    Tablero y editor
   feature/camera/   Cámara con detección en vivo y autocaptura
@@ -124,7 +124,8 @@ fixtures-publicos/  Fixtures sintéticos para los tests de paridad Python/Androi
 
 ### App
 
-Necesitas JDK 21 y el SDK de Android (lo más cómodo: Android Studio).
+Necesitas JDK 21, el SDK de Android (lo más cómodo: Android Studio) y el NDK de la versión
+de `android/gradle/libs.versions.toml` (en Android Studio: SDK Manager → SDK Tools → NDK).
 
 ```sh
 cd android
@@ -133,8 +134,10 @@ cd android
 ./gradlew :vision:connectedDebugAndroidTest   # paridad con Python, en un móvil o emulador
 ```
 
-Stockfish se descarga automáticamente de su release oficial la primera vez (y se comprueba su
-SHA-256). El modelo ya entrenado está en `ml/models/square_net.tflite`.
+Stockfish 16 se compila desde su código fuente oficial la primera vez (unos segundos): las
+fuentes y la red neuronal se descargan y se comprueba su SHA-256. Es la 16 y no una posterior
+porque desde la 16.1 las redes pasan de 100 MB, y eran casi toda la APK; para analizar
+posiciones de un libro sobra. El modelo ya entrenado está en `ml/models/square_net.tflite`.
 
 Para una APK release firmada, crea `android/release.jks` y `android/keystore.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). El workflow

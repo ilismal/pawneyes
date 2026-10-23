@@ -1,5 +1,7 @@
-Stockfish (https://stockfishchess.org), compilación oficial de desarrollo
-stockfish-dev-20261017-effdc3fd, stockfish-android-arm64-universal
-(código fuente: https://github.com/official-stockfish/Stockfish/tree/effdc3fd).
+Stockfish 16 (https://stockfishchess.org), compilado a partir del código fuente
+oficial (https://github.com/official-stockfish/Stockfish/tree/sf_16) con el NDK de
+Android, sin cambios en el código: solo opciones de compilación (arm64 genérico,
+NNUE_EMBEDDING_OFF y alineado a 16 KB; ver engine/build.gradle.kts). La red neuronal
+nn-5af11540bbfe.nnue es la de Stockfish 16 y se incluye aparte.
 Licencia GPLv3: ver STOCKFISH-LICENSE.txt. Si se distribuye la app, hay que cumplirla
 (ofrecer el código fuente de Stockfish y mantener este aviso).
