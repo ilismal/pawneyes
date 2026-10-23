@@ -58,6 +58,14 @@ class StockfishEngineTest {
                 "profundidad ${p.depth}, mate ${p.lines.first().mate}")
             assertEquals(1, p.lines.first().mate)
             assertTrue(System.currentTimeMillis() - start < 10_000)
+
+            // Como rival: con mate en 1 lo da incluso limitado; y luego el análisis vuelve a 3 líneas.
+            assertEquals("h5f7", engine.bestMove(pastor, elo = 1350, movetimeMs = 300)!!.uci)
+            val opening = engine.bestMove(Position.START, elo = null, movetimeMs = 300)!!
+            assertTrue(opening in Position.START.legalMoves())
+            engine.analyze(Position.START)
+            val again = engine.until(Position.START) { it.lines.size == 3 && it.depth >= 10 }
+            assertEquals(3, again.lines.size)
             engine.stop()
         }
     }

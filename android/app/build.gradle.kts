@@ -64,6 +64,7 @@ dependencies {
     implementation(project(":vision"))
     implementation(project(":feature:camera"))
     implementation(project(":engine"))
+    implementation(project(":maia"))
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.core.ktx)

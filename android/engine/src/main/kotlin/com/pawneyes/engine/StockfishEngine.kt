@@ -46,7 +46,13 @@ class StockfishEngine private constructor(
     private val writer = process.outputStream.bufferedWriter()
     private val mutex = Mutex()
     private val handshake = Channel<String>(Channel.UNLIMITED)  // uciok, readyok
-    private val bestmoves = Channel<Unit>(Channel.CONFLATED)
+    private val bestmoves = Channel<String>(Channel.CONFLATED)  // la jugada de cada «bestmove»
+
+    /** Líneas de análisis configuradas (se restauran al volver de jugar). */
+    private var lines = 3
+
+    /** true tras pedir una jugada para jugar: hay que restaurar la configuración de análisis. */
+    private var playMode = false
 
     @Volatile
     private var current: Position? = null
@@ -82,7 +88,7 @@ class StockfishEngine private constructor(
                 val position = current
                 _analysis.value?.takeIf { it.position == position && it.only == currentOnly }
                     ?.let { _analysis.value = it.copy(done = true) }
-                bestmoves.trySend(Unit)
+                bestmoves.trySend(line.split(" ").getOrElse(1) { "(none)" })
             }
             else -> {
                 val info = Uci.parseInfo(line) ?: return
@@ -123,6 +129,7 @@ class StockfishEngine private constructor(
         send("setoption name Threads value $threads")
         send("setoption name Hash value $hashMb")
         send("setoption name MultiPV value $lines")
+        this@StockfishEngine.lines = lines
         send("isready")
         await("readyok")
     }
@@ -145,6 +152,12 @@ class StockfishEngine private constructor(
         mutex.withLock {
             stopSearch()
             bestmoves.tryReceive()  // descarta un bestmove viejo, si quedó alguno
+            if (playMode) {
+                // Vuelta al análisis tras jugar: todas las líneas y a plena fuerza.
+                send("setoption name UCI_LimitStrength value false")
+                send("setoption name MultiPV value $lines")
+                playMode = false
+            }
             _analysis.value = Analysis(position, emptyList(), only = only)
             currentOnly = only
             current = position
@@ -155,6 +168,31 @@ class StockfishEngine private constructor(
     }
 
     suspend fun stop() = withContext(Dispatchers.IO) { mutex.withLock { stopSearch() } }
+
+    /**
+     * Jugada de Stockfish como rival: piensa `movetimeMs` y, con `elo`, juega con la
+     * fuerza limitada a ese Elo (UCI_LimitStrength + UCI_Elo, de 1320 a 3190).
+     * Null si no hay jugada (mate o ahogado).
+     */
+    suspend fun bestMove(position: Position, elo: Int?, movetimeMs: Long = 1000): Move? = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            stopSearch()
+            bestmoves.tryReceive()
+            send("setoption name MultiPV value 1")
+            if (elo != null) {
+                send("setoption name UCI_LimitStrength value true")
+                send("setoption name UCI_Elo value ${elo.coerceIn(MIN_ELO, MAX_ELO)}")
+            } else {
+                send("setoption name UCI_LimitStrength value false")
+            }
+            playMode = true
+            send("position fen ${position.toFen()}")
+            send("go movetime $movetimeMs")
+            val reply = withTimeoutOrNull(movetimeMs + 10_000) { bestmoves.receive() }
+                ?: error("Stockfish no ha respondido con una jugada")
+            Move.fromUci(reply)
+        }
+    }
 
     override fun close() {
         closing = true
@@ -173,6 +211,10 @@ class StockfishEngine private constructor(
 
         /** Profundidad máxima por defecto: de sobra para posiciones de libro, y acotada en batería. */
         const val DEFAULT_DEPTH = 40
+
+        /** Rango de UCI_Elo de Stockfish. */
+        const val MIN_ELO = 1320
+        const val MAX_ELO = 3190
 
         /** Profundidad a la que se da por bueno un mate y se para la búsqueda. */
         const val MATE_CONFIRM_DEPTH = 20

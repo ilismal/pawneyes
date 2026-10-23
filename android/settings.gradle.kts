@@ -14,4 +14,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "pawneyes"
-include(":app", ":core:chess", ":feature:board", ":feature:camera", ":vision", ":engine")
+include(":app", ":core:chess", ":feature:board", ":feature:camera", ":vision", ":engine", ":maia")

@@ -42,11 +42,14 @@
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
 - **Modo ejercicio**: busca la mejor jugada sin ver la evaluación; la app la compara con la de
   Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes).
+- **Jugar desde cualquier posición** contra Stockfish (de 1350 de Elo a plena fuerza) o contra
+  [Maia](https://maiachess.com) (1100–1900), una red entrenada con partidas de Lichess para jugar
+  como una persona de ese nivel, errores incluidos. Con deshacer y la partida en PGN.
 - Copiar el FEN, abrir la posición en Lichess o compartirla como PGN o como imagen.
 - **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
 
 Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La APK ocupa unos
-100 MB, la mayor parte por Stockfish y sus redes neuronales.
+130 MB, la mayor parte por Stockfish y sus redes neuronales.
 
 ## Instalación
 
@@ -90,11 +93,12 @@ android/            App (Kotlin, Jetpack Compose)
   core/chess/       Posición, FEN, generador de jugadas (verificado con perft), notación
   vision/           Detector, recorte y clasificador (OpenCV 5 + LiteRT)
   engine/           Stockfish por UCI (el binario se descarga al compilar)
+  maia/             Maia 1 en LiteRT: codificación de lc0 y elección de jugada
   feature/board/    Tablero y editor
   feature/camera/   Cámara con detección en vivo y autocaptura
   app/              Pantallas, análisis y explorador de líneas
 ml/                 Python: generador sintético, detector, entrenamiento y exportación
-fixtures-publicos/  Fixtures sintéticos para los tests de paridad Python/Android
+fixtures-publicos/  Fixtures sintéticos para los tests de paridad Python/Android (y de Maia)
 ```
 
 ## Compilar
@@ -153,6 +157,16 @@ uv run python -m train.train --epochs 12     # entrenar (solo con datos sintéti
 uv run python -m export.export_tflite        # exportar a TFLite y comprobar que coincide
 ```
 
+Las redes de Maia ya convertidas están en `ml/models/maia/`. Para regenerarlas desde los pesos
+originales de lc0:
+
+```sh
+for e in 1100 1300 1500 1700 1900; do
+  curl -LO https://github.com/CSSLab/maia-chess/raw/master/maia_weights/maia-$e.pb.gz
+done
+uv run python maia/export.py .              # LiteRT + fixtures-publicos/maia.json
+```
+
 Las fotos de evaluación (`ejemplos/`), las del ajuste fino (`entrenamiento/`) y los fixtures que
 salen de ellas (`fixtures/`) **no se publican**: son páginas de libros con derechos de autor.
 Para usar las tuyas, pon fotos con su `.fen` (solo la parte de piezas) en `ejemplos/` y genera
@@ -166,4 +180,5 @@ juegos de piezas con licencias libres (Apache 2.0, MIT, CC0).
 
 [GPLv3](LICENSE). La app incluye [Stockfish](https://stockfishchess.org) (GPLv3), las piezas
 [chessnut](https://github.com/LexLuengas/chessnut-pieces) de Alexis Luengas (Apache 2.0),
-OpenCV y LiteRT (Apache 2.0): ver [android/LICENSES.md](android/LICENSES.md).
+OpenCV y LiteRT (Apache 2.0) y las redes de [Maia](https://github.com/CSSLab/maia-chess)
+(GPLv3), convertidas a LiteRT con `ml/maia/export.py`: ver [android/LICENSES.md](android/LICENSES.md).

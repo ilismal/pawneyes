@@ -109,6 +109,8 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
     PawneyesTheme {
         val vm: ScanViewModel = viewModel()
         val analysisVm: AnalysisViewModel = viewModel()
+        val gameVm: GameViewModel = viewModel()
+        var playSetup by rememberSaveable { mutableStateOf(false) }
         val editor = rememberBoardEditorState()
         var exploration by remember { mutableStateOf<Exploration?>(null) }
         // El motor analiza lo que se ve: la posición del editor o la de la línea que se recorre.
@@ -117,7 +119,9 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         LifecycleEventEffect(Lifecycle.Event.ON_START) { analysisVm.setForeground(true) }
         LifecycleEventEffect(Lifecycle.Event.ON_STOP) { analysisVm.setForeground(false) }
         var camera by rememberSaveable { mutableStateOf(false) }
-        LaunchedEffect(camera, vm.state) { analysisVm.setBusy(camera || vm.state is ScanState.Scanning) }
+        // Durante una partida el motor es del rival: el análisis se pausa.
+        val playing = gameVm.game != null
+        LaunchedEffect(camera, vm.state, playing) { analysisVm.setBusy(camera || vm.state is ScanState.Scanning || playing) }
         val scan = remember(vm, editor) { { uri: Uri -> vm.scan(uri) { editor.showScan(it) } } }
         val picker = rememberLauncherForActivityResult(PickVisualMedia()) { uri -> uri?.let(scan) }
         LaunchedEffect(shared.value) {
@@ -165,13 +169,45 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         onLineClick = { line -> exploration = Exploration(Line(shown, line.pv), 1) },
                         // El ejercicio se lanza desde el editor, no desde el explorador.
                         onExercise = if (exploration == null) ({ analysisVm.startExercise(editor.position) }) else null,
+                        onPlay = if (exploration == null) ({ playSetup = true }) else null,
                     )
                 }
             }
             val context = LocalContext.current
             val explore = exploration
             val ex = analysisVm.exercise
-            if (ex != null && explore == null) {
+            val game = gameVm.game
+            if (playSetup) {
+                PlaySetupDialog(editor.position, onDismiss = { playSetup = false }, onPlay = { side, rival ->
+                    playSetup = false
+                    gameVm.start(editor.position, side, rival)
+                })
+            }
+            if (game != null) {
+                BackHandler { gameVm.exit() }
+                GameScreen(
+                    game, gameVm.human, gameVm.opponent, gameVm.thinking, gameVm.error,
+                    onMove = gameVm::play,
+                    onUndo = gameVm::undo,
+                    onRestart = gameVm::restart,
+                    onAnalyse = {
+                        editor.load(game.position)
+                        gameVm.exit()
+                    },
+                    onExit = gameVm::exit,
+                    shareButton = {
+                        val last = game.moves.lastOrNull()
+                        ShareButton(
+                            onPgn = { Sharing.sharePgn(context, game.start, game.moves) },
+                            onImage = {
+                                Sharing.shareImage(context, game.position, gameVm.human == com.pawneyes.chess.Side.BLACK, emptyList(),
+                                    last?.let { setOf(it.from, it.to) } ?: emptySet())
+                            },
+                        )
+                    },
+                    modifier = Modifier.padding(padding),
+                )
+            } else if (ex != null && explore == null) {
                 BackHandler { analysisVm.exitExercise() }
                 ExerciseScreen(
                     ex,

@@ -66,15 +66,19 @@ fun AnalysisPanel(
     error: String?,
     onLineClick: (EngineLine) -> Unit = {},
     onExercise: (() -> Unit)? = null,
+    onPlay: (() -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Switch(checked = enabled, onCheckedChange = onToggle)
             Text(stringResource(R.string.analysis_toggle), style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f))
-            // Solo si hay algo que resolver: posición legal y con jugadas.
-            if (onExercise != null && position.isLegal() && position.legalMoves().isNotEmpty()) {
-                TextButton(onClick = onExercise) { Text(stringResource(R.string.exercise_start)) }
+        }
+        // Solo si hay algo que resolver o jugar: posición legal y con jugadas.
+        if ((onExercise != null || onPlay != null) && position.isLegal() && position.legalMoves().isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                onExercise?.let { TextButton(onClick = it) { Text(stringResource(R.string.exercise_start)) } }
+                onPlay?.let { TextButton(onClick = it) { Text(stringResource(R.string.game_start)) } }
             }
         }
         if (!enabled) return@Column

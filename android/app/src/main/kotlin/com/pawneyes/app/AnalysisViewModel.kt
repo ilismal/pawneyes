@@ -93,7 +93,7 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun ensureEngine(): StockfishEngine =
-        engine.value ?: StockfishEngine.start(getApplication()).also { engine.value = it }
+        engine.value ?: EngineHolder.get(getApplication()).also { engine.value = it }
 
     fun toggle(on: Boolean) {
         enabled = on
@@ -198,6 +198,6 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        engine.value?.close()
+        EngineHolder.close()
     }
 }
