@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://ilismal.github.io/pawneyes/">Página del proyecto</a>
+</p>
+
+<p align="center">
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/ilismal/pawneyes">
     <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Consíguelo en Obtainium" height="60">
   </a>
