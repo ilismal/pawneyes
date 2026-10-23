@@ -33,6 +33,7 @@ private val DarkSquare = Color(0xFFB58863)
 private val MarkColor = Color(0xFFD32F2F)
 private val ArrowColor = Color(0xCC15781B)
 private val HighlightColor = Color(0x80F6E05E)  // última jugada
+private val DotColor = Color(0x5A000000)  // destinos posibles al mover
 
 /** Casilla (0 = a8 … 63 = h1) que se dibuja en la fila/columna de pantalla dadas. */
 fun squareAt(row: Int, col: Int, flipped: Boolean): Int =
@@ -74,6 +75,7 @@ fun ChessBoard(
     marked: Set<Int> = emptySet(),
     arrows: List<Pair<Int, Int>> = emptyList(),
     highlighted: Set<Int> = emptySet(),
+    dots: Set<Int> = emptySet(),
     onSquareClick: ((Int) -> Unit)? = null,
 ) {
     val images = pieceImages()
@@ -106,6 +108,12 @@ fun ChessBoard(
                             ((row + 1) * cell).roundToInt() - y0),
                         filterQuality = FilterQuality.High,
                     )
+                }
+                if (square in dots) {
+                    // Destino posible: punto si está vacía, anillo si hay pieza que capturar.
+                    val c = topLeft + Offset(cell / 2, cell / 2)
+                    if (position[square] == null) drawCircle(DotColor, cell * 0.15f, c)
+                    else drawCircle(DotColor, cell * 0.44f, c, style = Stroke(width = cell * 0.08f))
                 }
                 if (square in marked) {
                     val w = cell * 0.08f

@@ -13,6 +13,8 @@
     <string name="action_clear">Vaciar</string>
     <string name="action_start">Inicial</string>
     <string name="action_undo">Deshacer</string>
+    <string name="promotion_title">Coronar en…</string>
+    <string name="promotion_cancel">Cancelar</string>
     <string name="fen_label">FEN</string>
     <string name="fen_load">Cargar</string>
     <string name="fen_invalid">FEN no válido: %1$s</string>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import com.pawneyes.chess.Side
 import com.pawneyes.chess.isCheckmate
 import com.pawneyes.chess.isLegal
 import com.pawneyes.chess.isStalemate
+import com.pawneyes.chess.legalMoves
 import com.pawneyes.chess.lineToSan
 import com.pawneyes.engine.Analysis
 import com.pawneyes.engine.EngineLine
@@ -63,11 +65,17 @@ fun AnalysisPanel(
     analysis: Analysis?,
     error: String?,
     onLineClick: (EngineLine) -> Unit = {},
+    onExercise: (() -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Switch(checked = enabled, onCheckedChange = onToggle)
-            Text(stringResource(R.string.analysis_toggle), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.analysis_toggle), style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f))
+            // Solo si hay algo que resolver: posición legal y con jugadas.
+            if (onExercise != null && position.isLegal() && position.legalMoves().isNotEmpty()) {
+                TextButton(onClick = onExercise) { Text(stringResource(R.string.exercise_start)) }
+            }
         }
         if (!enabled) return@Column
         val current = analysis?.takeIf { it.position == position && it.lines.isNotEmpty() }

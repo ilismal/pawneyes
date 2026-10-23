@@ -33,6 +33,25 @@
     <string name="explore_start">Posición de partida</string>
     <string name="explore_edit">Editar esta posición</string>
     <string name="explore_back">Volver</string>
+    <string name="exercise_start">Resolver como ejercicio</string>
+    <string name="exercise_title">Ejercicio · juegan %1$s</string>
+    <string name="exercise_prompt">Busca la mejor jugada y hazla en el tablero.</string>
+    <string name="exercise_preparing">Stockfish está preparando la solución…</string>
+    <string name="exercise_checking">Comprobando %1$s…</string>
+    <string name="exercise_best">¡Correcto!</string>
+    <string name="exercise_good">Buena jugada</string>
+    <string name="exercise_inaccuracy">Imprecisión</string>
+    <string name="exercise_mistake">Error</string>
+    <string name="exercise_blunder">Error grave</string>
+    <string name="exercise_you_played">Has jugado %1$s.</string>
+    <string name="exercise_loss">Pierdes %1$s peones respecto a la mejor jugada.</string>
+    <string name="exercise_missed_mate">Había un mate forzado y se escapa.</string>
+    <string name="exercise_allows_mate">Permite que el rival dé mate.</string>
+    <string name="exercise_solution">Solución de Stockfish</string>
+    <string name="exercise_retry">Reintentar</string>
+    <string name="exercise_show_solution">Ver solución</string>
+    <string name="exercise_explore">Recorrer la solución</string>
+    <string name="exercise_exit">Salir</string>
     <string name="side_white_short">blancas</string>
     <string name="side_black_short">negras</string>
 </resources>

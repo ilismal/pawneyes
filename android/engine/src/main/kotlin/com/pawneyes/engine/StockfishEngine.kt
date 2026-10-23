@@ -2,6 +2,7 @@ package com.pawneyes.engine
 
 import android.content.Context
 import android.util.Log
+import com.pawneyes.chess.Move
 import com.pawneyes.chess.Position
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +23,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Estado del análisis de una posición: las mejores líneas, ordenadas, y si el
  * motor ya ha terminado (llegó a la profundidad máxima o se agotó la búsqueda).
  */
-data class Analysis(val position: Position, val lines: List<EngineLine>, val done: Boolean = false) {
+data class Analysis(
+    val position: Position,
+    val lines: List<EngineLine>,
+    val done: Boolean = false,
+    /** Jugadas a las que se restringió la búsqueda (UCI `searchmoves`); vacío = todas. */
+    val only: List<Move> = emptyList(),
+) {
     val depth: Int get() = lines.firstOrNull()?.depth ?: 0
 }
 
@@ -44,9 +51,12 @@ class StockfishEngine private constructor(
     @Volatile
     private var current: Position? = null
 
-    /** Posición cuya búsqueda ya se ha pedido parar por haber encontrado mate. */
     @Volatile
-    private var stopping: Position? = null
+    private var currentOnly: List<Move> = emptyList()
+
+    /** Búsqueda (posición y restricción) que ya se ha pedido parar por haber encontrado mate. */
+    @Volatile
+    private var stopping: Pair<Position, List<Move>>? = null
 
     private val _analysis = MutableStateFlow<Analysis?>(null)
     val analysis: StateFlow<Analysis?> = _analysis.asStateFlow()
@@ -70,21 +80,23 @@ class StockfishEngine private constructor(
             line.startsWith("bestmove") -> {
                 // Fin de la búsqueda: si era la de la posición actual, se marca terminada.
                 val position = current
-                _analysis.value?.takeIf { it.position == position }?.let { _analysis.value = it.copy(done = true) }
+                _analysis.value?.takeIf { it.position == position && it.only == currentOnly }
+                    ?.let { _analysis.value = it.copy(done = true) }
                 bestmoves.trySend(Unit)
             }
             else -> {
                 val info = Uci.parseInfo(line) ?: return
                 val position = current ?: return
-                val previous = _analysis.value?.takeIf { it.position == position }
+                val only = currentOnly
+                val previous = _analysis.value?.takeIf { it.position == position && it.only == only }
                 // Cada multipv llega por separado: se sustituye la de su número.
                 val lines = (previous?.lines.orEmpty().filter { it.multipv != info.multipv } + info).sortedBy { it.multipv }
-                _analysis.value = Analysis(position, lines, previous?.done ?: false)
+                _analysis.value = Analysis(position, lines, previous?.done ?: false, only)
                 // Con un mate forzado ya confirmado, seguir afinando las demás líneas
                 // gasta batería sin aportar nada: se termina la búsqueda.
                 val best = lines.first()
-                if (best.mate != null && best.depth >= MATE_CONFIRM_DEPTH && stopping != position) {
-                    stopping = position
+                if (best.mate != null && best.depth >= MATE_CONFIRM_DEPTH && stopping != (position to only)) {
+                    stopping = position to only
                     send("stop")
                 }
             }
@@ -129,14 +141,16 @@ class StockfishEngine private constructor(
      * un final sencillo), UCI obliga al motor a esperar un `stop` y Stockfish lo
      * hace en un bucle activo, con un núcleo al 100 % sin hacer nada útil.
      */
-    suspend fun analyze(position: Position) = withContext(Dispatchers.IO) {
+    suspend fun analyze(position: Position, only: List<Move> = emptyList()) = withContext(Dispatchers.IO) {
         mutex.withLock {
             stopSearch()
             bestmoves.tryReceive()  // descarta un bestmove viejo, si quedó alguno
-            _analysis.value = Analysis(position, emptyList())
+            _analysis.value = Analysis(position, emptyList(), only = only)
+            currentOnly = only
             current = position
             send("position fen ${position.toFen()}")
-            send("go depth $maxDepth")
+            val restrict = if (only.isEmpty()) "" else " searchmoves " + only.joinToString(" ") { it.uci }
+            send("go depth $maxDepth$restrict")
         }
     }
 

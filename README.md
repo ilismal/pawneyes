@@ -40,6 +40,8 @@
 - **Análisis con Stockfish** (compilación posterior a la 19) dentro de la app: evaluación, las tres mejores líneas en notación
   algebraica española (R, D, T, A, C) y una flecha con la mejor jugada.
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
+- **Modo ejercicio**: busca la mejor jugada sin ver la evaluación; la app la compara con la de
+  Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes).
 - Copiar el FEN o abrir la posición en Lichess.
 
 Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La APK ocupa unos

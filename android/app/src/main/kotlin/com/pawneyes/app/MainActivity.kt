@@ -152,14 +152,33 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
             val arrows = if (analysisVm.enabled) analysis.bestArrow(shown) else emptyList()
             val panel: @Composable () -> Unit = {
                 if (analysisVm.available) {
-                    AnalysisPanel(analysisVm.enabled, analysisVm::toggle, shown, analysis, analysisVm.error) { line ->
-                        exploration = Exploration(Line(shown, line.pv), 1)
-                    }
+                    AnalysisPanel(
+                        analysisVm.enabled, analysisVm::toggle, shown, analysis, analysisVm.error,
+                        onLineClick = { line -> exploration = Exploration(Line(shown, line.pv), 1) },
+                        // El ejercicio se lanza desde el editor, no desde el explorador.
+                        onExercise = if (exploration == null) ({ analysisVm.startExercise(editor.position) }) else null,
+                    )
                 }
             }
             val context = LocalContext.current
             val explore = exploration
-            if (explore != null) {
+            val ex = analysisVm.exercise
+            if (ex != null && explore == null) {
+                BackHandler { analysisVm.exitExercise() }
+                ExerciseScreen(
+                    ex,
+                    analysisVm.error,
+                    onMove = analysisVm::play,
+                    onRetry = analysisVm::retryExercise,
+                    onSolution = analysisVm::showSolution,
+                    onExploreSolution = {
+                        ex.best?.let { exploration = Exploration(Line(ex.position, it.pv), 1) }
+                        analysisVm.exitExercise()
+                    },
+                    onExit = analysisVm::exitExercise,
+                    modifier = Modifier.padding(padding),
+                )
+            } else if (explore != null) {
                 BackHandler { exploration = null }
                 LineExplorer(
                     explore,
