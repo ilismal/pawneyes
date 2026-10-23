@@ -103,4 +103,33 @@
     <string name="game_restart">Empezar de nuevo</string>
     <string name="game_analyse">Analizar esta posición</string>
     <string name="game_exit">Salir</string>
+    <string name="history_open">Historial de escaneos (%1$d)</string>
+    <plurals name="history_title">
+        <item quantity="one">Historial · %1$d escaneo</item>
+        <item quantity="other">Historial · %1$d escaneos</item>
+    </plurals>
+    <string name="history_back">Volver</string>
+    <string name="history_clear">Borrar todo</string>
+    <plurals name="history_clear_title">
+        <item quantity="one">¿Borrar %1$d escaneo del historial?</item>
+        <item quantity="other">¿Borrar los %1$d escaneos del historial?</item>
+    </plurals>
+    <string name="history_empty">Aún no hay escaneos. Cada vez que escanees un diagrama se guardará aquí, con tus correcciones.</string>
+    <string name="history_search">Buscar por etiqueta (libro, página…)</string>
+    <string name="history_no_match">Ninguna etiqueta coincide.</string>
+    <string name="history_no_label">Sin etiqueta</string>
+    <string name="history_summary">Juegan %1$s · %2$s</string>
+    <plurals name="history_pieces">
+        <item quantity="one">%1$d pieza</item>
+        <item quantity="other">%1$d piezas</item>
+    </plurals>
+    <string name="history_label">Etiquetar</string>
+    <string name="history_label_title">Etiqueta</string>
+    <string name="history_label_hint">Por ejemplo: Capablanca, pág. 37</string>
+    <string name="history_save">Guardar</string>
+    <string name="history_delete">Borrar</string>
+    <string name="history_delete_title">¿Borrar este escaneo del historial?</string>
+    <string name="history_card_title">Escaneo del historial</string>
+    <string name="history_card_hint">Lo que cambies en el tablero se guarda en esta entrada mientras veas esta tarjeta.</string>
+    <string name="history_saved_hint">Se guarda en el historial con tus correcciones (menú ⋮).</string>
 </resources>

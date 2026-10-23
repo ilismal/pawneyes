@@ -57,6 +57,8 @@
   [Maia](https://maiachess.com) (1100–1900), una red entrenada con partidas de Lichess para jugar
   como una persona de ese nivel, errores incluidos. Con deshacer y la partida en PGN.
 - Copiar el FEN, abrir la posición en Lichess o compartirla como PGN o como imagen.
+- **Historial de escaneos**: cada escaneo se guarda (miniatura, posición con tus correcciones y
+  fecha) y se puede etiquetar con el libro y la página, buscar y volver a abrir en el editor.
 - **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
 
 Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La APK ocupa unos

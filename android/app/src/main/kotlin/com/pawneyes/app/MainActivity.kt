@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,6 +113,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         val analysisVm: AnalysisViewModel = viewModel()
         val gameVm: GameViewModel = viewModel()
         var playSetup by rememberSaveable { mutableStateOf(false) }
+        var history by rememberSaveable { mutableStateOf(false) }
         val editor = rememberBoardEditorState()
         var exploration by remember { mutableStateOf<Exploration?>(null) }
         // El motor analiza lo que se ve: la posición del editor o la de la línea que se recorre.
@@ -123,6 +125,10 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         // Durante una partida el motor es del rival: el análisis se pausa.
         val playing = gameVm.game != null
         LaunchedEffect(camera, vm.state, playing) { analysisVm.setBusy(camera || vm.state is ScanState.Scanning || playing) }
+        // Las correcciones del escaneo que se está viendo se guardan en su entrada del historial.
+        LaunchedEffect(editor) {
+            snapshotFlow { editor.position.toFen() to editor.flipped }.collect { (fen, flipped) -> vm.editorChanged(fen, flipped) }
+        }
         val scan = remember(vm, editor) { { uri: Uri -> vm.scan(uri) { editor.showScan(it) } } }
         val picker = rememberLauncherForActivityResult(PickVisualMedia()) { uri -> uri?.let(scan) }
         LaunchedEffect(shared.value) {
@@ -156,7 +162,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                             onClick = { picker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
                             enabled = idle,
                         ) { Text(stringResource(R.string.scan_gallery)) }
-                        TrainingMenu(vm)
+                        TrainingMenu(vm, onHistory = { history = true })
                     },
                 )
             },
@@ -178,6 +184,29 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
             val explore = exploration
             val ex = analysisVm.exercise
             val game = gameVm.game
+            val scope = rememberCoroutineScope()
+            if (history) {
+                BackHandler { history = false }
+                HistoryScreen(
+                    vm.historyEntries,
+                    thumbnail = vm::thumbnailFile,
+                    onOpen = { entry ->
+                        scope.launch {
+                            vm.open(entry)
+                            editor.load(com.pawneyes.chess.Position.fromFen(entry.fen))
+                            editor.flipped = entry.flipped
+                            exploration = null
+                            history = false
+                        }
+                    },
+                    onRename = { entry, label -> vm.rename(entry.id, label) },
+                    onDelete = { vm.delete(it.id) },
+                    onClear = { vm.clearHistory() },
+                    onBack = { history = false },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
             if (playSetup) {
                 PlaySetupDialog(editor.position, onDismiss = { playSetup = false }, onPlay = { side, rival ->
                     playSetup = false
@@ -335,6 +364,8 @@ private fun ScanPanel(
                     }
                     Text(stringResource(if (ctx?.side != null) R.string.scan_hint_side_read else R.string.scan_hint),
                         style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.history_saved_hint), style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.hide)) }
                         TextButton(onClick = onSaveForTraining, enabled = !state.saved) {
@@ -348,6 +379,22 @@ private fun ScanPanel(
                 }
             }
         }
+        is ScanState.FromHistory -> Card(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                state.thumbnail?.let {
+                    Image(it.asImageBitmap(), contentDescription = stringResource(R.string.scan_image), modifier = Modifier.size(120.dp))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.history_card_title), style = MaterialTheme.typography.titleSmall)
+                    if (state.entry.label.isNotBlank()) Text(state.entry.label, style = MaterialTheme.typography.bodyMedium)
+                    Text(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT,
+                        java.util.Locale.forLanguageTag("es")).format(java.util.Date(state.entry.createdAt)),
+                        style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.history_card_hint), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.hide)) }
+                }
+            }
+        }
         ScanState.NoBoard -> Message(stringResource(R.string.scan_no_board), onDismiss)
         is ScanState.Failed -> Message(stringResource(R.string.scan_failed, state.message), onDismiss)
     }
@@ -355,7 +402,7 @@ private fun ScanPanel(
 
 /** Menú ⋮: exportar o borrar los escaneos guardados para entrenar. */
 @Composable
-private fun TrainingMenu(vm: ScanViewModel) {
+private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
@@ -364,6 +411,10 @@ private fun TrainingMenu(vm: ScanViewModel) {
     Box {
         IconButton(onClick = { open = true }) { Text("⋮", style = MaterialTheme.typography.titleLarge) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.history_open, vm.historyEntries.size)) },
+                onClick = { open = false; onHistory() },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.training_export, n)) },
                 enabled = n > 0,
