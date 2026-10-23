@@ -29,6 +29,13 @@
   &nbsp;
   <img src="docs/screenshots/03-editor.png" alt="Editor de posiciones" width="260">
 </p>
+<p align="center">
+  <img src="docs/screenshots/04-ejercicio.png" alt="Modo ejercicio: jugada correcta" width="260">
+  &nbsp;
+  <img src="docs/screenshots/05-jugar-eleccion.png" alt="Elegir bando y rival para jugar" width="260">
+  &nbsp;
+  <img src="docs/screenshots/06-partida.png" alt="Partida contra Maia" width="260">
+</p>
 
 ## Qué hace
 
