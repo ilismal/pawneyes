@@ -1,0 +1,467 @@
+{
+ "turn": [
+  {
+   "lines": [
+    {
+     "text": "Juegan las negras",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "Las blancas juegan y ganan",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "Diagrama 12. Juegan negras y dan mate en 3",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "Juegan las Blancas.",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "White to move",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "Black to play and win",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "Mate en 5",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "3.e5 c5 4.c3 Cc6 5.Cf3",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "3.05 054.03 DC6 5.013",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "...Ab4",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": ".2b4",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "…Ab4",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "19. ..., T1A ...",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "19. -. TIA al 4",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "19. «+. O TIA e | o",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "12. Cf3 Cc6",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "12. Cf3 Cc6 13. Ae2",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "8. T2D, ...",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "9. R3R,",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "ne | 9. RIR, \"",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "7. TxP, T2TR | 9. R3R,",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "13. Cf3, Cc6",
+     "above": true,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "20. C5A!, R1A | ...",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "20, C5AL, RIA 1 ...",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "20. ..., T1A",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "20... T1A",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "19. ..., T1A",
+     "above": true,
+     "distance": 0.5
+    },
+    {
+     "text": "20. C5A!",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "w"
+  },
+  {
+   "lines": [
+    {
+     "text": "5.Cf3",
+     "above": true,
+     "distance": 0.5
+    },
+    {
+     "text": "20. C5A!",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "Juegan las negras",
+     "above": true,
+     "distance": 0.5
+    },
+    {
+     "text": "20. C5A!",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "Juegan las negras",
+     "above": false,
+     "distance": 0.5
+    },
+    {
+     "text": "White to move",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "Las negras presionarán sobre ese peón",
+     "above": false,
+     "distance": 0.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "Juegan las negras",
+     "above": false,
+     "distance": 3.5
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "texto",
+     "above": true,
+     "distance": 0.2
+    },
+    {
+     "text": "más texto",
+     "above": true,
+     "distance": 0.6
+    },
+    {
+     "text": "Juegan las negras",
+     "above": true,
+     "distance": 1.0
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [
+    {
+     "text": "blancos, es decir, la casilla d4:",
+     "above": true,
+     "distance": 1.5
+    },
+    {
+     "text": "3.e5 c5 4.c3 Cc6 5.Cf3",
+     "above": true,
+     "distance": 0.3
+    }
+   ],
+   "side": "b"
+  },
+  {
+   "lines": [
+    {
+     "text": "Capítulo 4",
+     "above": true,
+     "distance": 2.0
+    }
+   ],
+   "side": null
+  },
+  {
+   "lines": [],
+   "side": null
+  }
+ ],
+ "coordinates": [
+  {
+   "found": {
+    "left": "87654321",
+    "right": "",
+    "top": "",
+    "bottom": "abcdefgh"
+   },
+   "flipped": false
+  },
+  {
+   "found": {
+    "left": "12345678",
+    "right": "",
+    "top": "",
+    "bottom": "hgfedcba"
+   },
+   "flipped": true
+  },
+  {
+   "found": {
+    "left": "8765421",
+    "right": "",
+    "top": "ade",
+    "bottom": ""
+   },
+   "flipped": false
+  },
+  {
+   "found": {
+    "left": "",
+    "right": "",
+    "top": "",
+    "bottom": "hgfdcb"
+   },
+   "flipped": true
+  },
+  {
+   "found": {
+    "left": "53",
+    "right": "",
+    "top": "",
+    "bottom": "e"
+   },
+   "flipped": null
+  },
+  {
+   "found": {
+    "left": "",
+    "right": "",
+    "top": "",
+    "bottom": ""
+   },
+   "flipped": null
+  },
+  {
+   "found": {
+    "left": "36",
+    "right": "",
+    "top": "",
+    "bottom": "ae"
+   },
+   "flipped": null
+  },
+  {
+   "found": {
+    "left": "1357",
+    "right": "",
+    "top": "",
+    "bottom": ""
+   },
+   "flipped": true
+  }
+ ]
+}

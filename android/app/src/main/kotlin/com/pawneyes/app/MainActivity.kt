@@ -49,6 +49,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -259,22 +260,36 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                 }
                 BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share) {
                     ScanPanel(vm.state, editor.marked.size, onDismiss = vm::dismiss,
-                        onSaveForTraining = { vm.saveForTraining(editor.position.toFen()) })
+                        onSaveForTraining = { vm.saveForTraining(editor.position.toFen()) },
+                        onToggleFlipped = {
+                            // Se gira la posición y la vista: el tablero sigue viéndose como en el libro.
+                            editor.flipped = vm.toggleFlipped()
+                            editor.load(editor.position.rotated(), editor.marked.mapTo(mutableSetOf()) { 63 - it })
+                        })
                 }
             }
         }
     }
 }
 
-/** Carga la lectura en el editor: blancas abajo y enroques por defecto si caben. */
+/**
+ * Carga la lectura en el editor, con enroques por defecto si caben y el turno si lo
+ * dice el texto. Si el diagrama está impreso desde las negras, se ve igual que en el libro.
+ */
 private fun BoardEditorState.showScan(result: com.pawneyes.vision.ScanResult) {
-    val p = result.position
+    val p = result.position.copy(sideToMove = result.context?.side ?: com.pawneyes.chess.Side.WHITE)
     load(p.copy(castling = p.plausibleCastling()), result.doubtful)
-    flipped = false
+    flipped = result.context?.flipped == true
 }
 
 @Composable
-private fun ScanPanel(state: ScanState, marked: Int, onDismiss: () -> Unit, onSaveForTraining: () -> Unit) {
+private fun ScanPanel(
+    state: ScanState,
+    marked: Int,
+    onDismiss: () -> Unit,
+    onSaveForTraining: () -> Unit,
+    onToggleFlipped: () -> Unit,
+) {
     when (state) {
         ScanState.Idle -> Unit
         ScanState.Scanning -> Row(
@@ -298,7 +313,28 @@ private fun ScanPanel(state: ScanState, marked: Int, onDismiss: () -> Unit, onSa
                         else stringResource(R.string.scan_no_doubts),
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    Text(stringResource(R.string.scan_hint), style = MaterialTheme.typography.bodySmall)
+                    val ctx = state.result.context
+                    ctx?.side?.let { side ->
+                        Text(stringResource(R.string.scan_side_read,
+                            stringResource(if (side == com.pawneyes.chess.Side.WHITE) R.string.side_white_short else R.string.side_black_short)),
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    }
+                    // Solo si se ha deducido que está girado: el usuario puede deshacerlo (y rehacerlo).
+                    if (ctx?.flipped == true) {
+                        Text(
+                            stringResource(when {
+                                !state.flipped -> R.string.scan_flip_undone
+                                ctx.flippedBy == "coordinates" -> R.string.scan_flipped_coordinates
+                                else -> R.string.scan_flipped_pawns
+                            }),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        TextButton(onClick = onToggleFlipped) {
+                            Text(stringResource(if (state.flipped) R.string.scan_not_flipped else R.string.scan_flip_again))
+                        }
+                    }
+                    Text(stringResource(if (ctx?.side != null) R.string.scan_hint_side_read else R.string.scan_hint),
+                        style = MaterialTheme.typography.bodySmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.hide)) }
                         TextButton(onClick = onSaveForTraining, enabled = !state.saved) {

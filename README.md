@@ -42,6 +42,10 @@
 - **Escanea un diagrama** desde la cámara (con autocaptura cuando el tablero se queda quieto),
   desde la galería o compartiendo una foto con la app. Detecta el tablero aunque la foto esté
   girada o en perspectiva, y marca en rojo las casillas de las que no está seguro.
+- **Lee el texto de la página** (con Tesseract, en el móvil): el turno, si el pie lo dice
+  («Juegan las negras», «White to move») o se deduce de la jugada impresa junto al diagrama
+  («5.Cf3», «19. ..., T1A»), y si el diagrama está impreso desde el lado de las negras (por
+  las coordenadas o, si no las hay, por los peones). Si se equivoca, se corrige con un toque.
 - **Editor de posiciones**: colocar y quitar piezas, turno, enroques, FEN, deshacer, avisos de
   posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al bando que no mueve…).
 - **Análisis con Stockfish** (compilación posterior a la 19) dentro de la app: evaluación, las tres mejores líneas en notación
@@ -69,7 +73,8 @@ Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La
 ```
 foto ─► detector del tablero (OpenCV) ─► tablero enderezado 512×512
      ─► 64 casillas ─► CNN pequeña (LiteRT) en las 4 rotaciones
-     ─► elegir rotación + reglas de legalidad ─► posición ─► editor / Stockfish
+     ─► elegir rotación + reglas de legalidad ─► posición
+     ─► texto alrededor (Tesseract): ¿negras abajo? ¿turno? ─► editor / Stockfish
 ```
 
 1. **Detector** (`ml/detect`, portado a `android/vision`): binarización adaptativa, casillas
@@ -83,9 +88,16 @@ foto ─► detector del tablero (OpenCV) ─► tablero enderezado 512×512
 3. **Rotación y legalidad**: se prueban las 4 orientaciones y se elige la de mayor confianza en
    las casillas ocupadas; luego se corrigen errores imposibles (un rey de cada color, máximo de
    peones…) usando la segunda opción del modelo.
+4. **Texto de la página** (`ml/caption`): con la homografía del tablero se endereza también la
+   página de alrededor y se pasa por Tesseract (modelo rápido de español). Del texto más cercano
+   se saca el turno, con reglas que se fían de la estructura (número + jugadas) y no de leer bien
+   cada jugada, y de las coordenadas impresas, la orientación. Si no hay coordenadas, cuenta la
+   posición de los peones: en 2 200 posiciones de partidas de Maia contra sí misma no dio ni un
+   falso positivo, y reconoce un tablero girado en el 96–100 % de las aperturas y medios juegos
+   (en los finales, con pocos peones, solo una de cada cuatro veces).
 
 La implementación Android reproduce exactamente la de Python: hay tests que comparan cada paso
-(esquinas del detector, recorte, salidas del modelo, rotación y reglas) contra fixtures
+(esquinas del detector, recorte, salidas del modelo, rotación, reglas, orientación y turno) contra fixtures
 generados en Python. Los del repositorio (`fixtures-publicos/`) salen de diagramas sintéticos,
 así que el CI los ejecuta en cada cambio.
 
@@ -104,7 +116,7 @@ android/            App (Kotlin, Jetpack Compose)
   feature/board/    Tablero y editor
   feature/camera/   Cámara con detección en vivo y autocaptura
   app/              Pantallas, análisis y explorador de líneas
-ml/                 Python: generador sintético, detector, entrenamiento y exportación
+ml/                 Python: generador sintético, detector, entrenamiento, texto de la página y exportación
 fixtures-publicos/  Fixtures sintéticos para los tests de paridad Python/Android (y de Maia)
 ```
 
@@ -181,11 +193,14 @@ los fixtures con `uv run python -m export.fixtures`; los tests los usarán adem�
 
 Los fixtures públicos se regeneran (de forma determinista) con
 `uv run python -m export.public_fixtures`, tras descargar y rasterizar las piezas. Solo usan
-juegos de piezas con licencias libres (Apache 2.0, MIT, CC0).
+juegos de piezas con licencias libres (Apache 2.0, MIT, CC0). Los casos de las reglas de turno y
+orientación (`fixtures-publicos/caption.json`) salen de `uv run python -m caption.cases`. Para
+leer el texto en Python hace falta Tesseract instalado (`brew install tesseract`); el modelo de
+español está en `ml/models/tessdata/`.
 
 ## Licencia
 
 [GPLv3](LICENSE). La app incluye [Stockfish](https://stockfishchess.org) (GPLv3), las piezas
 [chessnut](https://github.com/LexLuengas/chessnut-pieces) de Alexis Luengas (Apache 2.0),
-OpenCV y LiteRT (Apache 2.0) y las redes de [Maia](https://github.com/CSSLab/maia-chess)
+OpenCV, LiteRT y Tesseract (Apache 2.0) y las redes de [Maia](https://github.com/CSSLab/maia-chess)
 (GPLv3), convertidas a LiteRT con `ml/maia/export.py`: ver [android/LICENSES.md](android/LICENSES.md).

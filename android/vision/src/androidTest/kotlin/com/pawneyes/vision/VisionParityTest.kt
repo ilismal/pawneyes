@@ -101,16 +101,29 @@ class VisionParityTest {
 
     @Test
     fun scanMatchesPython() {
-        Scanner(SquareClassifier.fromAssets(context)).use { scanner ->
+        Scanner(SquareClassifier.fromAssets(context), TextReader.create(context)).use { scanner ->
             var same = 0
             for ((dir, b) in boards) {
                 val name = "$dir/${b.getString("name")}"
+                val start = System.currentTimeMillis()
                 val result = scanner.scan(rgba("$dir/${b.getString("photo")}"))
+                val millis = System.currentTimeMillis() - start
                 assertNotNull("$name: sin tablero", result)
+                // La posición ya va girada si el texto dice que está impresa desde las negras.
                 val placement = result!!.position.placement()
-                val ok = placement == b.getString("placement") && result.reading.rotation == b.getInt("rotation")
+                val ctx = result.context!!
+                val side = when (ctx.side) {
+                    com.pawneyes.chess.Side.WHITE -> "w"
+                    com.pawneyes.chess.Side.BLACK -> "b"
+                    null -> null
+                }
+                val ok = placement == b.getString("placement") && result.reading.rotation == b.getInt("rotation") &&
+                    ctx.flipped == b.optBoolean("flipped") && ctx.flippedBy == b.opt("flipped_by").takeIf { it is String } &&
+                    side == b.opt("side").takeIf { it is String }
                 if (ok) same++
-                log("escaneo $name: ${if (ok) "igual" else "DISTINTO"}  $placement  dudosas ${result.doubtful.size}")
+                log("escaneo $name: ${if (ok) "igual" else "DISTINTO"}  $placement  dudosas ${result.doubtful.size}  " +
+                    "negras abajo ${ctx.flipped} (${ctx.flippedBy}, Python ${b.opt("flipped_by")})  " +
+                    "turno $side (Python ${b.opt("side")})  $millis ms")
             }
             assertEquals(boards.size, same)
         }

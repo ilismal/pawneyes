@@ -152,13 +152,22 @@ def _random_text(rng: np.random.Generator, canvas: np.ndarray, region, style: St
         y += line_h
 
 
-def render_board(rng: np.random.Generator, labels: np.ndarray, set_name: str
+def render_board(rng: np.random.Generator, labels: np.ndarray, set_name: str,
+                 flipped: bool = False, caption: str | None = None
                  ) -> tuple[np.ndarray, np.ndarray, int]:
-    """Página con el diagrama. Devuelve (imagen float32, esquinas tl,tr,br,bl, lado casilla)."""
+    """Página con el diagrama. Devuelve (imagen float32, esquinas tl,tr,br,bl, lado casilla).
+
+    `flipped`: impreso desde el lado de las negras (casillas y coordenadas al revés).
+    `caption`: pie bajo el tablero («Juegan las negras»…) en lugar del texto de relleno.
+    """
+    if flipped:
+        labels = np.asarray(labels)[::-1]
     s = int(rng.integers(36, 84))
     st = random_style(rng, s)
     board_px = 8 * s
     m = [int(s * rng.uniform(0.8, 2.6)) for _ in range(4)]  # izq, arriba, der, abajo
+    if caption is not None:
+        m[3] = max(m[3], int(s * 2.2))
     h, w = board_px + m[1] + m[3], board_px + m[0] + m[2]
     canvas = np.full((h, w), st.paper, np.float32)
     bx, by = m[0], m[1]
@@ -228,9 +237,10 @@ def render_board(rng: np.random.Generator, labels: np.ndarray, set_name: str
     if st.coords:
         scale = s / 90
         for k in range(8):
-            _put_text(canvas, str(8 - k), (bx - int(s * 0.45), by + k * s + int(s * 0.6)),
+            _put_text(canvas, str(k + 1 if flipped else 8 - k),
+                      (bx - int(s * 0.45), by + k * s + int(s * 0.6)),
                       cv2.FONT_HERSHEY_SIMPLEX, scale, st.ink, 1)
-            _put_text(canvas, "abcdefgh"[k], (bx + k * s + int(s * 0.4),
+            _put_text(canvas, ("hgfedcba" if flipped else "abcdefgh")[k], (bx + k * s + int(s * 0.4),
                                               by + board_px + int(s * 0.45)),
                       cv2.FONT_HERSHEY_SIMPLEX, scale, st.ink, 1)
 
@@ -238,8 +248,12 @@ def render_board(rng: np.random.Generator, labels: np.ndarray, set_name: str
     gap = int(s * 0.7)
     if rng.random() < 0.8:
         _random_text(rng, canvas, (0, 0, w, by - gap), st, s)
-    if rng.random() < 0.8:
+    if rng.random() < 0.8 and caption is None:
         _random_text(rng, canvas, (0, by + board_px + gap, w, h), st, s)
+    if caption is not None:
+        scale = s / 55
+        _put_text(canvas, caption, (bx, by + board_px + gap + int(30 * scale)),
+                  cv2.FONT_HERSHEY_DUPLEX, scale, st.ink, max(1, int(scale * 1.5)))
 
     corners = np.array([[bx, by], [bx + board_px, by], [bx + board_px, by + board_px],
                         [bx, by + board_px]], np.float32)

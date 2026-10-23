@@ -75,4 +75,14 @@ class FenTest {
         assertTrue(placements.size >= 10)
         placements.forEach { assertEquals(it, Position.fromFen(it).placement()) }
     }
+
+    @Test
+    fun rotatedTurnsTheBoardAround() {
+        val p = Position.fromFen("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")
+        val r = p.rotated()
+        assertEquals("R1BKQBNR/PPP1PPPP/2N5/3P4/3p4/5n2/ppp1pppp/rnbkqb1r", r.placement())
+        assertEquals(Side.BLACK, r.sideToMove)
+        assertEquals(emptySet<Castling>(), r.castling)  // reyes y torres ya no están en su sitio
+        assertEquals(p.copy(enPassant = null), r.rotated().copy(halfmoveClock = p.halfmoveClock))
+    }
 }

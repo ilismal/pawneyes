@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.pawneyes.chess.Position
 import com.pawneyes.vision.ScanResult
 import com.pawneyes.vision.Scanner
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,14 @@ sealed interface ScanState {
     data object Scanning : ScanState
 
     /** `photo`: la foto escaneada, reducida, por si se guarda para entrenar. */
-    class Done(val result: ScanResult, val millis: Long, val photo: Bitmap, val saved: Boolean = false) : ScanState
+    /** `flipped`: la lectura se ha girado porque el diagrama parece impreso desde las negras. */
+    class Done(
+        val result: ScanResult,
+        val millis: Long,
+        val photo: Bitmap,
+        val saved: Boolean = false,
+        val flipped: Boolean = result.context?.flipped == true,
+    ) : ScanState
     data object NoBoard : ScanState
     class Failed(val message: String) : ScanState
 }
@@ -76,11 +84,20 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
     fun saveForTraining(fen: String) {
         val done = state as? ScanState.Done ?: return
         if (done.saved) return
+        // Se entrena con el tablero tal como está impreso: si se ha girado, se deshace el giro.
+        val printed = if (done.flipped) Position.fromFen(fen).rotated().toFen() else fen
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { training.save(done.photo, done.result.reading.rotation, fen) }
+            withContext(Dispatchers.IO) { training.save(done.photo, done.result.reading.rotation, printed) }
             trainingCount = training.count()
-            if (state === done) state = ScanState.Done(done.result, done.millis, done.photo, saved = true)
+            if (state === done) state = ScanState.Done(done.result, done.millis, done.photo, saved = true, done.flipped)
         }
+    }
+
+    /** El usuario corrige la orientación deducida: devuelve la nueva. */
+    fun toggleFlipped(): Boolean {
+        val done = state as? ScanState.Done ?: return false
+        state = ScanState.Done(done.result, done.millis, done.photo, done.saved, !done.flipped)
+        return !done.flipped
     }
 
     suspend fun exportTraining(): java.io.File = withContext(Dispatchers.IO) { training.exportZip() }

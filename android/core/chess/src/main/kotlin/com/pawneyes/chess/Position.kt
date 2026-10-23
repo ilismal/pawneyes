@@ -33,6 +33,15 @@ data class Position(
             this[Square.parse(it.rookHome)!!] == Piece(it.side, PieceType.ROOK)
     }
 
+    /**
+     * El tablero girado 180° (un diagrama impreso desde el lado de las negras, leído
+     * como si las blancas estuvieran abajo, o al revés). Los enroques se recalculan.
+     */
+    fun rotated(): Position {
+        val p = Position(board.reversed(), sideToMove, fullmoveNumber = fullmoveNumber)
+        return p.copy(castling = p.plausibleCastling())
+    }
+
     /** Parte de piezas del FEN. */
     fun placement(): String = (0 until 8).joinToString("/") { row ->
         buildString {

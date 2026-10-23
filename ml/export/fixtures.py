@@ -16,8 +16,11 @@ y en manifest.json, para cada una:
                              k×90° (np.rot90, antihorario)
   quad           esquinas del tablero en la foto reducida (tl, tr, br, bl)
   rotation       k elegido por predict_board
-  placement_raw  lectura sin reglas;  placement  lectura con reglas
-  truth          posición real (del .fen)
+  placement_raw  lectura sin reglas;  placement  lectura con reglas, ya girada si
+                 el diagrama está impreso desde el lado de las negras
+  flipped, flipped_by, side   orientación y turno leídos del texto (caption.context)
+  truth          posición real (del .fen); truth_side, truth_flipped si el .fen los
+                 trae: «<piezas> [w|b|-] [flipped]»
 """
 
 import argparse
@@ -28,6 +31,7 @@ import cv2
 import numpy as np
 import torch
 
+from caption.context import read_context
 from common.legality import fix_position
 from common.squares import (BOARD_PX, CLASSES, INPUT_PX, MARGIN, crop_squares,
                             labels_to_placement, placement_to_labels)
@@ -58,7 +62,8 @@ def generate(src: Path, out: Path) -> None:
             continue
         quad = found[0]
         board = cv2.cvtColor(warp_board(photo, quad), cv2.COLOR_BGR2GRAY)
-        truth = placement_to_labels(fen.read_text().split()[0])
+        fields = fen.read_text().split()
+        truth = placement_to_labels(fields[0])
         cv2.imwrite(str(out / f"{stem}.photo.png"), photo)
         cv2.imwrite(str(out / f"{stem}.board.png"), board)
         squares = crop_squares(board)
@@ -70,6 +75,11 @@ def generate(src: Path, out: Path) -> None:
             logits.append(tfl(x).numpy().round(5).tolist())
         raw, probs, k = predict_board(tfl, board, "cpu")
         fixed, _ = fix_position(probs)
+        # La app lee el texto en la foto a resolución completa; aquí, en la misma foto
+        # reducida que recibe el test de Android, para que los dos lean lo mismo.
+        ctx = read_context(photo, quad, k, fixed)
+        if ctx.flipped:
+            fixed = fixed[::-1]
         items.append({
             "name": stem,
             "photo": f"{stem}.photo.png",
@@ -79,11 +89,17 @@ def generate(src: Path, out: Path) -> None:
             "rotation": int(k),
             "placement_raw": labels_to_placement(raw),
             "placement": labels_to_placement(fixed),
+            "flipped": ctx.flipped,
+            "flipped_by": ctx.flipped_by,
+            "side": ctx.side,
             "truth": labels_to_placement(truth),
+            "truth_side": fields[1] if len(fields) > 1 and fields[1] in "wb" else None,
+            "truth_flipped": "flipped" in fields[2:],
             "logits": logits,
         })
         ok = int((fixed == truth).sum())
-        print(f"{stem}: giro {k * 90}°  {ok}/64  {labels_to_placement(fixed)}")
+        print(f"{stem}: giro {k * 90}°  {ok}/64  {labels_to_placement(fixed)}  "
+              f"negras abajo: {ctx.flipped} ({ctx.flipped_by})  turno: {ctx.side}")
 
     manifest = {
         "board_px": BOARD_PX, "input_px": INPUT_PX, "margin": MARGIN, "classes": CLASSES,

@@ -33,7 +33,10 @@ class BoardReaderTest {
                 com.pawneyes.chess.Piece.fromFen(VisionSpec.CLASSES[it])
             }).placement()
             assertEquals(name, b.getString("placement_raw"), raw)
-            assertEquals(name, b.getString("placement"), reading.position().placement())
+            // Si el texto dice que está impreso desde las negras, Python ya lo gira.
+            val labels = if (b.optBoolean("flipped")) reading.labels.reversedArray() else reading.labels
+            val position = com.pawneyes.chess.Position(labels.map { com.pawneyes.chess.Piece.fromFen(VisionSpec.CLASSES[it]) })
+            assertEquals(name, b.getString("placement"), position.placement())
         }
     }
 }

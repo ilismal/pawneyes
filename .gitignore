@@ -11,13 +11,17 @@ __pycache__/
 # Juegos de piezas de Lichess: licencias variadas, se descargan con synth/download_pieces.py
 ml/assets/pieces/
 ml/assets/pieces_png/
-# Modelos: solo se versiona el definitivo (square_net.pt y su export .tflite) y Maia en .tflite
+# Modelos: solo se versiona el definitivo (square_net.pt y su export .tflite), Maia en .tflite
+# y el modelo rápido de español de Tesseract (tessdata_fast, Apache 2.0)
 ml/models/*
 !ml/models/square_net.pt
 !ml/models/square_net.tflite
 !ml/models/maia/
 ml/models/maia/*
 !ml/models/maia/*.tflite
+!ml/models/tessdata/
+ml/models/tessdata/*
+!ml/models/tessdata/spa.traineddata
 
 # --- macOS / editores ---
 .DS_Store

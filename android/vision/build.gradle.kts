@@ -40,6 +40,12 @@ val copyModel = tasks.register<CopyModel>("copyModel") {
     outputDir.set(layout.buildDirectory.dir("generated/assets/model"))
 }
 
+// Modelo rápido de español de Tesseract (tessdata_fast, Apache 2.0), versionado en ml/models/.
+val copyTessdata = tasks.register<CopyModel>("copyTessdata") {
+    model.set(rootProject.file("../ml/models/tessdata/spa.traineddata"))
+    outputDir.set(layout.buildDirectory.dir("generated/assets/tessdata"))
+}
+
 val collectFixtures = tasks.register<CollectFixtures>("collectFixtures") {
     rootProject.file("../fixtures-publicos").takeIf { it.isDirectory }?.let { publicDir.set(it) }
     rootProject.file("../fixtures").takeIf { it.isDirectory }?.let { privateDir.set(it) }
@@ -57,12 +63,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    androidResources { noCompress += "tflite" }
+    androidResources { noCompress += listOf("tflite", "traineddata") }
 }
 
 androidComponents {
     onVariants { variant ->
         variant.sources.assets?.addGeneratedSourceDirectory(copyModel, CopyModel::outputDir)
+        variant.sources.assets?.addGeneratedSourceDirectory(copyTessdata, CopyModel::outputDir)
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(collectFixtures, CollectFixtures::outputDir)
     }
 }
@@ -71,6 +78,7 @@ dependencies {
     api(project(":core:chess"))
     implementation(libs.opencv)
     implementation(libs.litert)
+    implementation(libs.tesseract4android)
     testImplementation(libs.junit)
     testImplementation(libs.json)
     androidTestImplementation(libs.junit)

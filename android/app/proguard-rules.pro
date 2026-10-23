@@ -10,3 +10,7 @@
 # (litert → ai-delivery → asset-delivery → work-runtime). Con el R8 del AGP 9, sin
 # esta regla se renombraba y la app se cerraba al arrancar.
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
+# Tesseract4Android: el código nativo lee campos y llama a métodos Java por su nombre
+# (y la AAR no trae reglas propias).
+-keep class com.googlecode.tesseract.android.** { *; }
+-keep class com.googlecode.leptonica.android.** { *; }

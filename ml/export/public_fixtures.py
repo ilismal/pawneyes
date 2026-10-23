@@ -22,7 +22,8 @@ from export.fixtures import generate
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "fixtures-publicos"
 
-# (nombre, posición, juego de piezas y su licencia, estilo de casilla oscura, giro de la foto)
+# (nombre, posición, juego de piezas y su licencia, estilo de casilla oscura, giro de la foto,
+#  opciones: turno real, impreso desde las negras, coordenadas, pie)
 BOARDS = [
     ("pastor", "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR", "chessnut", "hatch", 0),    # Apache 2.0
     ("espanola", "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R", "fantasy", "dots", 0),   # MIT
@@ -30,21 +31,35 @@ BOARDS = [
     ("najdorf", "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R", "celtic", "cross", 0),     # MIT
     ("lucena", "1K1k4/1P6/8/8/8/8/r7/2R5", "rhosgfx", "hatch", 90),                              # CC0
     ("final-peones", "8/5k2/3p2p1/2pP1p2/2P2P2/4K1P1/8/8", "chessnut", "solid", 0),               # Apache 2.0
+    # Orientación y turno (#3, #4).
+    ("negras-abajo", "r2q1rk1/pp2bppp/2n1pn2/3p4/3P4/2NBPN2/PP3PPP/R2Q1RK1", "chessnut", "hatch", 0,
+     {"flipped": True, "coords": True}),
+    ("negras-abajo-sin-coordenadas", "r1bq1rk1/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1",
+     "fantasy", "solid", 0, {"flipped": True, "coords": False}),
+    ("juegan-negras", "6k1/5ppp/8/8/8/8/5PPP/3R2K1", "chessnut", "hatch", 0,
+     {"side": "b", "caption": "Juegan las negras."}),
 ]
 
 
-def photo(name: str, placement: str, set_name: str, dark: str, rotation: int, seed: int) -> np.ndarray:
+def photo(name: str, placement: str, set_name: str, dark: str, rotation: int, seed: int,
+          options: dict | None = None) -> np.ndarray:
+    options = options or {}
+
     def style(rng, s):
         st = original_style(rng, s)
         st.dark = dark
         st.piece_mode, st.posterize = "opaque", False
+        if "coords" in options:
+            st.coords = options["coords"]
         return st
 
     original_style = R.random_style
     R.random_style = style
     try:
         rng = np.random.default_rng(seed)
-        page, corners, s = R.render_board(rng, placement_to_labels(placement), set_name)
+        page, corners, s = R.render_board(rng, placement_to_labels(placement), set_name,
+                                          flipped=options.get("flipped", False),
+                                          caption=options.get("caption"))
         img, _, _ = R.photograph(rng, page, corners, s)
     finally:
         R.random_style = original_style
@@ -59,17 +74,20 @@ def photo(name: str, placement: str, set_name: str, dark: str, rotation: int, se
 def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp)
-        for i, (name, placement, set_name, dark, rotation) in enumerate(BOARDS):
+        for i, (name, placement, set_name, dark, rotation, *rest) in enumerate(BOARDS):
+            options = rest[0] if rest else {}
             # Algunas distorsiones aleatorias salen demasiado duras para el detector:
             # se usa la primera semilla con la que encuentra el tablero (determinista).
             for seed in range(100 * i, 100 * i + 100):
-                img = photo(name, placement, set_name, dark, rotation, seed)
+                img = photo(name, placement, set_name, dark, rotation, seed, options)
                 if find_board_quad(img) is not None:
                     break
             cv2.imwrite(str(src / f"{name}.png"), img)
-            (src / f"{name}.fen").write_text(placement + "\n")
+            extra = [options.get("side", "-")] + (["flipped"] if options.get("flipped") else [])
+            (src / f"{name}.fen").write_text(" ".join([placement, *extra]) + "\n")
         for old in OUT.glob("*"):
-            old.unlink()
+            if old.name not in ("maia.json", "caption.json"):  # maia/export.py, caption.cases
+                old.unlink()
         generate(src, OUT)
 
 

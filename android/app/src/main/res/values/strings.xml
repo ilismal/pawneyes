@@ -10,6 +10,13 @@
     </plurals>
     <string name="scan_no_doubts">Sin casillas dudosas. Compara de todos modos la imagen con el tablero.</string>
     <string name="scan_hint">El turno y los enroques no se ven en un diagrama: revísalos abajo.</string>
+    <string name="scan_hint_side_read">Los enroques no se ven en un diagrama, y el turno se deduce del texto: revísalos abajo.</string>
+    <string name="scan_side_read">Según el texto, juegan las %1$s.</string>
+    <string name="scan_flipped_coordinates">Impreso desde el lado de las negras (por las coordenadas): el tablero se muestra como en el libro.</string>
+    <string name="scan_flipped_pawns">Parece impreso desde el lado de las negras (por la posición de los peones): el tablero se muestra como en el libro.</string>
+    <string name="scan_flip_undone">Leído con las blancas abajo.</string>
+    <string name="scan_not_flipped">No está girado</string>
+    <string name="scan_flip_again">Sí está girado</string>
     <string name="scan_no_board">No he encontrado ningún tablero en la foto. Prueba con una foto más cercana y de frente.</string>
     <string name="scan_failed">No se ha podido leer la foto: %1$s</string>
     <string name="scan_image">Tablero tal como lo ha visto el escáner</string>
