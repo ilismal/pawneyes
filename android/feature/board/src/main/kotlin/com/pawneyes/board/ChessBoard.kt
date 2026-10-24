@@ -1,9 +1,15 @@
 package com.pawneyes.board
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -31,6 +37,7 @@ private val MarkColor = Color(0xFFD32F2F)
 private val ArrowColor = Color(0xCC15781B)
 private val HighlightColor = Color(0x80F6E05E)  // última jugada
 private val DotColor = Color(0x5A000000)  // destinos posibles al mover
+private val DragTargetColor = Color(0x5515781B)  // casilla bajo la pieza arrastrada
 
 /** Casilla (0 = a8 … 63 = h1) que se dibuja en la fila/columna de pantalla dadas. */
 fun squareAt(row: Int, col: Int, flipped: Boolean): Int =
@@ -54,6 +61,10 @@ fun ChessBoard(
     highlighted: Set<Int> = emptySet(),
     dots: Set<Int> = emptySet(),
     onSquareClick: ((Int) -> Unit)? = null,
+    /** Arrastrar (#25): ¿se puede arrastrar la pieza de esta casilla? */
+    onDragStart: ((Int) -> Boolean)? = null,
+    /** Se suelta la pieza arrastrada desde `from` en `to` (null: fuera del tablero). */
+    onDrop: ((from: Int, to: Int?) -> Unit)? = null,
 ) {
     val style = LocalBoardStyle.current
     val images = pieceImages(style.pieces)
@@ -68,7 +79,47 @@ fun ChessBoard(
             onSquareClick(squareAt(row, col, flipped))
         }
     }
-    Canvas(modifier.aspectRatio(1f).then(tap)) {
+    // Arrastre: la pieza sigue al dedo y se suelta en la casilla de debajo. Empieza al pasar
+    // el umbral de movimiento, así que un toque normal sigue siendo un toque.
+    var dragFrom by remember { mutableStateOf<Int?>(null) }
+    var dragAt by remember { mutableStateOf(Offset.Zero) }
+    val current by rememberUpdatedState(position)
+    // Los callbacks se leen al vuelo: si fueran clave de pointerInput, cada recomposición
+    // (la selección cambia al empezar a arrastrar) reiniciaría el gesto y lo cancelaría.
+    val canDrag by rememberUpdatedState(onDragStart)
+    val drop by rememberUpdatedState(onDrop)
+    val draggable = onDragStart != null && onDrop != null
+    val drag = if (!draggable) Modifier else Modifier.pointerInput(flipped, draggable) {
+        fun squareUnder(o: Offset): Int? {
+            val cell = size.width / 8f
+            if (o.x < 0 || o.y < 0 || o.x >= size.width || o.y >= size.height) return null
+            return squareAt((o.y / cell).toInt().coerceIn(0, 7), (o.x / cell).toInt().coerceIn(0, 7), flipped)
+        }
+        detectDragGestures(
+            onDragStart = { o ->
+                val sq = squareUnder(o)
+                if (sq != null && current[sq] != null && canDrag?.invoke(sq) == true) {
+                    dragFrom = sq
+                    dragAt = o
+                }
+            },
+            onDrag = { change, delta ->
+                if (dragFrom != null) {
+                    change.consume()
+                    dragAt += delta
+                }
+            },
+            onDragEnd = {
+                dragFrom?.let { from -> drop?.invoke(from, squareUnder(dragAt)) }
+                dragFrom = null
+            },
+            onDragCancel = {
+                dragFrom?.let { from -> drop?.invoke(from, from) }  // como si no se hubiera movido
+                dragFrom = null
+            },
+        )
+    }
+    Canvas(modifier.aspectRatio(1f).then(tap).then(drag)) {
         val cell = size.width / 8f
         val coordStyle = TextStyle(fontSize = (cell / 5f).toSp(), fontWeight = FontWeight.Bold)
         for (row in 0 until 8) {
@@ -78,7 +129,7 @@ fun ChessBoard(
                 val topLeft = Offset(col * cell, row * cell)
                 drawRect(if (dark) darkSquare else lightSquare, topLeft, Size(cell, cell))
                 if (square in highlighted) drawRect(HighlightColor, topLeft, Size(cell, cell))
-                position[square]?.let { piece ->
+                position[square]?.takeIf { square != dragFrom }?.let { piece ->
                     val x0 = (col * cell).roundToInt()
                     val y0 = (row * cell).roundToInt()
                     drawImage(
@@ -139,6 +190,23 @@ fun ChessBoard(
                 lineTo(base.x - n.x * head * 0.6f, base.y - n.y * head * 0.6f)
                 close()
             }, ArrowColor)
+        }
+        // La pieza arrastrada, encima de todo, un poco más grande y levantada para que el
+        // dedo no la tape; y la casilla de debajo, marcada.
+        dragFrom?.let { from ->
+            val piece = position[from] ?: return@let
+            val col = (dragAt.x / cell).toInt()
+            val row = (dragAt.y / cell).toInt()
+            if (dragAt.x >= 0 && dragAt.y >= 0 && col in 0..7 && row in 0..7) {
+                drawRect(DragTargetColor, Offset(col * cell, row * cell), Size(cell, cell))
+            }
+            val s = cell * 1.25f
+            drawImage(
+                images.getValue(piece),
+                dstOffset = IntOffset((dragAt.x - s / 2).roundToInt(), (dragAt.y - s * 0.9f).roundToInt()),
+                dstSize = IntSize(s.roundToInt(), s.roundToInt()),
+                filterQuality = FilterQuality.High,
+            )
         }
     }
 }

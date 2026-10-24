@@ -64,6 +64,20 @@ fun MoveInputBoard(
         highlighted = highlighted + listOfNotNull(selected),
         dots = targets,
         onSquareClick = if (enabled) ::tap else null,
+        // Arrastrar es lo mismo que tocar la pieza y luego el destino (#25).
+        onDragStart = if (enabled) { sq ->
+            (position[sq]?.side == position.sideToMove && legal.any { it.from == sq }).also { if (it) selected = sq }
+        } else null,
+        onDrop = if (enabled) { from, to ->
+            when {
+                to == null || to == from -> Unit  // se queda seleccionada, por si sigue con toques
+                legal.any { it.from == from && it.to == to } -> {
+                    selected = from
+                    tap(to)
+                }
+                else -> selected = null  // destino no legal
+            }
+        } else null,
     )
 
     promotion?.let { options ->

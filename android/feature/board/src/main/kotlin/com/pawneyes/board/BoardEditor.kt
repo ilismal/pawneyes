@@ -103,6 +103,19 @@ class BoardEditorState(initial: Position, flipped: Boolean = false, marked: Set<
     /** Corrige una casilla dudosa con una de las opciones del escáner y la da por revisada. */
     fun resolve(square: Int, piece: Piece?) = change(position.with(square, piece), marked - square)
 
+    /**
+     * Mueve una pieza de `from` a `to` arrastrándola (#25); fuera del tablero (`to` null),
+     * la quita. Las dos casillas dejan de estar marcadas como dudosas.
+     */
+    fun move(from: Int, to: Int?) {
+        if (to == from) return
+        val piece = position[from] ?: return
+        var p = position.with(from, null)
+        if (to != null) p = p.with(to, piece)
+        change(p.copy(castling = p.castling intersect p.plausibleCastling(), enPassant = null),
+            marked - from - listOfNotNull(to).toSet())
+    }
+
     /** Da por revisada una casilla dudosa sin cambiarla. */
     fun accept(square: Int) = change(position, marked - square)
 
@@ -180,7 +193,8 @@ fun BoardEditor(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         header()
-        ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows, onSquareClick = onSquare)
+        ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows, onSquareClick = onSquare,
+            onDragStart = { true }, onDrop = state::move)
         belowBoard()
         SideToMove(state)  // justo bajo el tablero: es lo primero que hay que decidir tras escanear
         PiecePalette(state)
