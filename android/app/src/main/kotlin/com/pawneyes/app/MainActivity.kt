@@ -128,6 +128,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         var playSetup by rememberSaveable { mutableStateOf(false) }
         var history by rememberSaveable { mutableStateOf(false) }
         var settingsOpen by rememberSaveable { mutableStateOf(false) }
+        var bookLine by rememberSaveable { mutableStateOf(false) }
         val editor = rememberBoardEditorState()
         var exploration by remember { mutableStateOf<Exploration?>(null) }
         // El motor analiza lo que se ve: la posición del editor o la de la línea que se recorre.
@@ -191,6 +192,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         // El ejercicio se lanza desde el editor, no desde el explorador.
                         onExercise = if (exploration == null) ({ analysisVm.startExercise(editor.position) }) else null,
                         onPlay = if (exploration == null) ({ playSetup = true }) else null,
+                        onBookLine = if (exploration == null) ({ bookLine = true }) else null,
                     )
                 }
             }
@@ -230,6 +232,13 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     modifier = Modifier.padding(padding),
                 )
                 return@Scaffold
+            }
+            if (bookLine) {
+                BookLineDialog(editor.position, onDismiss = { bookLine = false }, onLoad = { moves ->
+                    bookLine = false
+                    // Se recorre desde la posición del tablero, empezando antes de la primera jugada.
+                    exploration = Exploration(com.pawneyes.chess.Line(editor.position, moves.map { it.uci }), 0)
+                })
             }
             if (playSetup) {
                 PlaySetupDialog(editor.position, onDismiss = { playSetup = false }, onPlay = { side, rival ->

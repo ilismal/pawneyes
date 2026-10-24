@@ -3,6 +3,7 @@ package com.pawneyes.app
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -68,6 +69,7 @@ fun AnalysisPanel(
     onLineClick: (EngineLine) -> Unit = {},
     onExercise: (() -> Unit)? = null,
     onPlay: (() -> Unit)? = null,
+    onBookLine: (() -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -76,10 +78,11 @@ fun AnalysisPanel(
                 modifier = Modifier.weight(1f))
         }
         // Solo si hay algo que resolver o jugar: posición legal y con jugadas.
-        if ((onExercise != null || onPlay != null) && position.isLegal() && position.legalMoves().isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        if ((onExercise != null || onPlay != null || onBookLine != null) && position.isLegal() && position.legalMoves().isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 onExercise?.let { TextButton(onClick = it) { Text(stringResource(R.string.exercise_start)) } }
                 onPlay?.let { TextButton(onClick = it) { Text(stringResource(R.string.game_start)) } }
+                onBookLine?.let { TextButton(onClick = it) { Text(stringResource(R.string.book_start)) } }
             }
         }
         if (!enabled) return@Column

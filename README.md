@@ -56,6 +56,8 @@
 - **Análisis con Stockfish 16** dentro de la app: evaluación, las tres mejores líneas en notación
   algebraica española (R, D, T, A, C) y una flecha con la mejor jugada.
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
+- **Jugadas del libro**: escribe o pega una línea en notación descriptiva («1. P4R, P4R 2. C3AR,
+  C3AD», «C(3A)×D») o algebraica y recórrela desde la posición del diagrama.
 - **Modo ejercicio**: busca la mejor jugada sin ver la evaluación; la app la compara con la de
   Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes).
 - **Jugar desde cualquier posición** contra Stockfish (de 1350 de Elo a plena fuerza) o contra

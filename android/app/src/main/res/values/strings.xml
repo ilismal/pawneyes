@@ -154,4 +154,16 @@
         <item quantity="other">%1$d diagramas en la foto · viendo el %2$d. Toca otro para leerlo.</item>
     </plurals>
     <string name="scan_board_n">Diagrama %1$d</string>
+    <string name="book_start">Jugadas del libro</string>
+    <string name="book_title">Jugadas del libro</string>
+    <string name="book_hint">Escríbelas o pégalas desde esta posición, en descriptiva o en algebraica. Los números, los «…» y los «!» o «?» no hacen falta.</string>
+    <string name="book_placeholder">18. C4D, D×D 19. C(3A)×D!, T1A</string>
+    <string name="book_load">Recorrer</string>
+    <plurals name="book_load_partial">
+        <item quantity="one">Recorrer la %1$d que se entiende</item>
+        <item quantity="other">Recorrer las %1$d que se entienden</item>
+    </plurals>
+    <string name="book_unknown">La %1$d.ª jugada escrita («%2$s») no se entiende.</string>
+    <string name="book_illegal">La %1$d.ª jugada escrita («%2$s») no es legal en esa posición.</string>
+    <string name="book_ambiguous">La %1$d.ª jugada escrita («%2$s») es ambigua: %3$s.</string>
 </resources>
