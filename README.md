@@ -31,7 +31,7 @@
   &nbsp;
   <img src="docs/screenshots/02-explorar-linea.png" alt="Recorriendo una línea de Stockfish" width="260">
   &nbsp;
-  <img src="docs/screenshots/03-editor.png" alt="Editor de posiciones" width="260">
+  <img src="docs/screenshots/03-casilla-dudosa.png" alt="Corregir una casilla dudosa con las opciones del escáner" width="260">
 </p>
 <p align="center">
   <img src="docs/screenshots/04-ejercicio.png" alt="Modo ejercicio: jugada correcta" width="260">
@@ -50,30 +50,33 @@
 
 ## Qué hace
 
-- **Escanea un diagrama** desde la cámara (con autocaptura cuando el tablero se queda quieto),
-  desde la galería o compartiendo una foto con la app. Detecta el tablero aunque la foto esté
-  girada o en perspectiva, y marca en rojo las casillas de las que no está seguro. Si en la
-  página hay varios diagramas, los lee todos y se elige cuál cargar.
+- **Escanea un diagrama** desde la cámara (con autocaptura cuando el tablero se queda quieto,
+  zoom y linterna), desde la galería o compartiendo una foto con la app. Detecta el tablero
+  aunque la foto esté girada o en perspectiva, y marca en rojo las casillas de las que no está
+  seguro: al tocarlas, ofrece sus otras opciones para corregirlas con un toque. Si en la página
+  hay varios diagramas, se elige cuál cargar.
 - **Lee el texto de la página** (con Tesseract, en el móvil): el turno, si el pie lo dice
   («Juegan las negras», «White to move») o se deduce de la jugada impresa junto al diagrama
   («5.Cf3», «19. ..., T1A»), y si el diagrama está impreso desde el lado de las negras (por
   las coordenadas o, si no las hay, por los peones). Si se equivoca, se corrige con un toque.
-- **Editor de posiciones**: colocar y quitar piezas, turno, enroques, FEN, deshacer, avisos de
-  posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al bando que no mueve…).
+- **Editor de posiciones**: colocar, mover (arrastrando) y quitar piezas, turno, enroques, FEN,
+  deshacer, avisos de posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al
+  bando que no mueve…).
 - **Análisis con Stockfish 16** dentro de la app: evaluación, las tres mejores líneas en notación
   algebraica (con letras españolas, R D T A C, o inglesas) y una flecha con la mejor jugada.
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
 - **Jugadas del libro**: escribe o pega una línea en notación descriptiva («1. P4R, P4R 2. C3AR,
   C3AD», «C(3A)×D») o algebraica y recórrela desde la posición del diagrama.
 - **Modo ejercicio**: busca la mejor jugada sin ver la evaluación; la app la compara con la de
-  Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes). Si ya has
-  visto el análisis de esa posición, no se ofrece.
+  Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes). Si te
+  atascas, una pista marca la pieza que hay que mover. Si ya has visto el análisis de esa
+  posición, no se ofrece.
 - **Jugar desde cualquier posición** contra Stockfish (de 1350 de Elo a plena fuerza) o contra
   [Maia](https://maiachess.com) (1100–1900), una red entrenada con partidas de Lichess para jugar
   como una persona de ese nivel, errores incluidos. Con deshacer y la partida en PGN.
 - Copiar el FEN, abrir la posición en Lichess o compartirla como PGN o como imagen.
 - **Ajustes**: colores del tablero (madera, verde, azul u oscuro), cuatro juegos de piezas,
-  coordenadas y notación con letras españolas o inglesas.
+  coordenadas, notación con letras españolas o inglesas, y líneas y profundidad del análisis.
 - **Historial de escaneos**: cada escaneo se guarda (miniatura, posición con tus correcciones y
   fecha) y se puede etiquetar con el libro y la página, buscar y volver a abrir en el editor.
 - **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
@@ -120,8 +123,8 @@ La implementación Android reproduce exactamente la de Python: hay tests que com
 generados en Python. Los del repositorio (`fixtures-publicos/`) salen de diagramas sintéticos,
 así que el CI los ejecuta en cada cambio.
 
-**Precisión**: en mis 10 fotos de prueba (que no se publican, ver abajo) acierta el 99,4 % de las
-casillas y lee 8 de los 10 tableros sin ningún error. Funciona mejor con los libros que ha
+**Precisión**: en mis 10 fotos de prueba (que no se publican, ver abajo) acierta el 99,5 % de las
+casillas y lee 9 de los 10 tableros sin ningún error. Funciona mejor con los libros que ha
 visto en el ajuste fino; con estilos de pieza muy distintos se equivoca más.
 
 ## Estructura
@@ -184,7 +187,8 @@ El modelo acierta mejor con los libros que ha visto. Para enseñarle los tuyos:
    uv run python -m export.public_fixtures                  # fixtures de los tests
    ```
 
-Con solo 7 fotos de un libro, sus diagramas pasaron de 10 casillas mal a ninguna.
+Con solo 7 fotos de un libro, sus diagramas pasaron de 10 casillas mal a ninguna. Con 16 escaneos
+más de otros libros, exportados desde la app, las fotos de prueba pasaron de 8 a 9 tableros perfectos.
 
 ### Modelo (opcional)
 
