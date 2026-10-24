@@ -70,6 +70,7 @@ fun AnalysisPanel(
     onExercise: (() -> Unit)? = null,
     onPlay: (() -> Unit)? = null,
     onBookLine: (() -> Unit)? = null,
+    exerciseSeen: Boolean = false,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -80,9 +81,14 @@ fun AnalysisPanel(
         // Solo si hay algo que resolver o jugar: posición legal y con jugadas.
         if ((onExercise != null || onPlay != null || onBookLine != null) && position.isLegal() && position.legalMoves().isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                onExercise?.let { TextButton(onClick = it) { Text(stringResource(R.string.exercise_start)) } }
+                // Si ya se ha visto el análisis de esta posición, el ejercicio no tiene gracia (#19).
+                onExercise?.let { TextButton(onClick = it, enabled = !exerciseSeen) { Text(stringResource(R.string.exercise_start)) } }
                 onPlay?.let { TextButton(onClick = it) { Text(stringResource(R.string.game_start)) } }
                 onBookLine?.let { TextButton(onClick = it) { Text(stringResource(R.string.book_start)) } }
+            }
+            if (onExercise != null && exerciseSeen) {
+                Text(stringResource(R.string.exercise_seen), style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp))
             }
         }
         if (!enabled) return@Column

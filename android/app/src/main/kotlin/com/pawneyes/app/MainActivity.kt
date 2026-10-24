@@ -193,6 +193,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         onExercise = if (exploration == null) ({ analysisVm.startExercise(editor.position) }) else null,
                         onPlay = if (exploration == null) ({ playSetup = true }) else null,
                         onBookLine = if (exploration == null) ({ bookLine = true }) else null,
+                        exerciseSeen = analysisVm.analysisSeen(shown),
                     )
                 }
             }

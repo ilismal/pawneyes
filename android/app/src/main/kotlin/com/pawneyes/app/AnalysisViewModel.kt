@@ -73,7 +73,22 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
         .flatMapLatest { it?.analysis ?: flowOf(null) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    /** Posiciones cuyo análisis ya se ha visto en esta sesión (#19): no tiene sentido resolverlas como ejercicio. */
+    private var seen by mutableStateOf(emptySet<String>())
+
+    /** Clave de la posición sin los relojes: otra pieza, otro turno u otros enroques es otra posición. */
+    private fun key(p: Position) = p.toFen().split(' ').take(4).joinToString(" ")
+
+    fun analysisSeen(p: Position): Boolean = key(p) in seen
+
     init {
+        viewModelScope.launch {
+            // Solo cuenta lo que se muestra: con el análisis encendido y fuera del ejercicio
+            // (que usa el mismo motor para preparar la solución sin enseñarla).
+            analysis.collect { a ->
+                if (a != null && a.lines.isNotEmpty() && enabled && exercise == null) seen = seen + key(a.position)
+            }
+        }
         viewModelScope.launch {
             // Un margen corto: al editar no se relanza la búsqueda en cada toque.
             combine(position, active) { p, on -> p.takeIf { on } }
