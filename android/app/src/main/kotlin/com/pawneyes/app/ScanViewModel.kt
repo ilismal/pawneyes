@@ -24,13 +24,19 @@ import kotlinx.coroutines.withContext
  * correcciones mientras se ve la tarjeta.
  */
 class ScannedBoard(
-    val result: ScanResult,
-    val flipped: Boolean = result.context?.flipped == true,
+    /** null mientras no se ha leído: los demás diagramas de la página se leen al elegirlos (#23). */
+    val result: ScanResult?,
+    val detection: com.pawneyes.vision.BoardDetector.Detection,
+    /** La del tablero leído o, si aún no se ha leído, el tablero enderezado. */
+    val thumbnail: Bitmap,
+    val flipped: Boolean = result?.context?.flipped == true,
     val saved: Boolean = false,
     val entryId: String? = null,
 ) {
     fun copy(flipped: Boolean = this.flipped, saved: Boolean = this.saved, entryId: String? = this.entryId) =
-        ScannedBoard(result, flipped, saved, entryId)
+        ScannedBoard(result, detection, thumbnail, flipped, saved, entryId)
+
+    fun read(result: ScanResult) = ScannedBoard(result, detection, result.board)
 }
 
 sealed interface ScanState {
@@ -41,14 +47,27 @@ sealed interface ScanState {
      * Los diagramas de la foto (#10), en orden de lectura, y el que se está viendo.
      * `photo`: la foto escaneada, reducida, por si se guarda para entrenar.
      */
-    class Done(val boards: List<ScannedBoard>, val index: Int, val millis: Long, val photo: Bitmap) : ScanState {
+    class Done(
+        val boards: List<ScannedBoard>,
+        val index: Int,
+        val millis: Long,
+        val photo: Bitmap,
+        /** La foto original, para leer los demás diagramas al elegirlos; null si solo hay uno. */
+        val source: Bitmap? = null,
+        /** El diagrama que se está leyendo ahora mismo, si hay alguno. */
+        val loading: Int? = null,
+    ) : ScanState {
         val board: ScannedBoard get() = boards[index]
-        val result: ScanResult get() = board.result
+        /** El que se ve siempre está leído. */
+        val result: ScanResult get() = board.result!!
         val flipped: Boolean get() = board.flipped
         val saved: Boolean get() = board.saved
         val entryId: String? get() = board.entryId
 
-        fun with(b: ScannedBoard, at: Int = index) = Done(boards.toMutableList().also { it[at] = b }, at, millis, photo)
+        fun with(b: ScannedBoard, at: Int = index) =
+            Done(boards.toMutableList().also { it[at] = b }, at, millis, photo, source)
+
+        fun loading(at: Int?) = Done(boards, index, millis, photo, source, at)
     }
 
     /** Un escaneo reabierto desde el historial; las correcciones también se guardan en él. */
@@ -77,19 +96,27 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
             state = try {
                 val start = SystemClock.elapsedRealtime()
                 var kept: Bitmap? = null
-                val results = withContext(Dispatchers.Default) {
+                var source: Bitmap? = null
+                val boards = withContext(Dispatchers.Default) {
                     val bitmap = photo()
                     kept = reduced(bitmap)
-                    scanner.scanAll(bitmap)
+                    // Se detectan todos, pero solo se lee el primero; los demás, al elegirlos (#23).
+                    val found = scanner.detectAll(bitmap)
+                    if (found.size > 1) source = bitmap
+                    found.mapIndexed { i, d ->
+                        if (i == 0) scanner.read(bitmap, d).let { r -> ScannedBoard(r, d, r.board) }
+                        else ScannedBoard(null, d, scanner.thumbnail(bitmap, d))
+                    }
                 }
                 val millis = SystemClock.elapsedRealtime() - start
-                Log.i("Pawneyes", "escaneo en $millis ms: ${results.size} diagramas")
-                if (results.isEmpty()) ScanState.NoBoard
+                Log.i("Pawneyes", "escaneo en $millis ms: ${boards.size} diagramas")
+                if (boards.isEmpty()) ScanState.NoBoard
                 else {
+                    val first = boards[0].result!!
                     // Al historial antes de cargarlo en el editor: así sus correcciones ya van a la entrada.
-                    val entry = withContext(Dispatchers.IO) { addToHistory(results[0]) }
-                    val boards = results.mapIndexed { i, r -> ScannedBoard(r, entryId = if (i == 0) entry.id else null) }
-                    ScanState.Done(boards, 0, millis, kept!!).also { onResult(results[0]) }
+                    val entry = withContext(Dispatchers.IO) { addToHistory(first) }
+                    val withEntry = listOf(boards[0].copy(entryId = entry.id)) + boards.drop(1)
+                    ScanState.Done(withEntry, 0, millis, kept!!, source).also { onResult(first) }
                 }
             } catch (e: Exception) {
                 Log.e("Pawneyes", "error al escanear", e)
@@ -122,7 +149,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
             (state as? ScanState.Done)?.let { now ->
                 val i = now.boards.indexOfFirst { it.result === done.result }
                 if (i >= 0) state = ScanState.Done(now.boards.toMutableList().also { it[i] = it[i].copy(saved = true) },
-                    now.index, now.millis, now.photo)
+                    now.index, now.millis, now.photo, now.source, now.loading)
             }
         }
     }
@@ -140,11 +167,25 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
      */
     suspend fun select(index: Int): Pair<ScannedBoard, String>? {
         val done = state as? ScanState.Done ?: return null
-        val b = done.boards.getOrNull(index) ?: return null
+        if (done.loading != null) return null
+        var b = done.boards.getOrNull(index) ?: return null
+        if (b.result == null) {
+            // Se lee ahora, con la foto original que se guardó al escanear.
+            val source = done.source ?: return null
+            state = done.loading(index)
+            val result = try {
+                withContext(Dispatchers.Default) { scanner.read(source, b.detection) }
+            } finally {
+                (state as? ScanState.Done)?.let { state = it.loading(null) }
+            }
+            b = b.read(result)
+            // En su sitio (`index`), no en el del diagrama que se estaba viendo.
+            (state as? ScanState.Done)?.let { state = it.with(b, index) }
+        }
         pendingSave?.join()  // que las correcciones del diagrama que se deja queden guardadas
         // Cada diagrama entra en el historial la primera vez que se ve.
         val entry = withContext(Dispatchers.IO) {
-            b.entryId?.let { id -> history.entries().find { it.id == id } } ?: addToHistory(b.result)
+            b.entryId?.let { id -> history.entries().find { it.id == id } } ?: addToHistory(b.result!!)
         }
         val now = state as? ScanState.Done ?: return null
         val selected = b.copy(entryId = entry.id)

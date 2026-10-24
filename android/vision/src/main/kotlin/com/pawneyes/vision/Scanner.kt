@@ -68,10 +68,41 @@ class Scanner(private val classifier: SquareClassifier, private val text: TextRe
         return results
     }
 
-    fun scanAll(photo: Bitmap): List<ScanResult> {
+    fun scanAll(photo: Bitmap): List<ScanResult> = withMat(photo) { scanAll(it) }
+
+    /**
+     * Solo detectar (#23): los tableros de la foto en orden de lectura, sin leerlos. Las
+     * esquinas están en la escala de trabajo; se leen después con [read].
+     */
+    fun detectAll(photo: Bitmap): List<BoardDetector.Detection> = withMat(photo) { rgba ->
+        val work = resizeToWorkSize(rgba)
+        readingOrder(BoardDetector.detectAll(work)).also { work.release() }
+    }
+
+    /** Lee un tablero detectado con [detectAll] en la misma foto. */
+    fun read(photo: Bitmap, detection: BoardDetector.Detection): ScanResult = withMat(photo) { rgba ->
+        val work = resizeToWorkSize(rgba)
+        read(rgba, work, detection).also { work.release() }
+    }
+
+    /** Miniatura de un tablero sin leerlo (enderezado, aún sin girar). */
+    fun thumbnail(photo: Bitmap, detection: BoardDetector.Detection, size: Int = 256): Bitmap = withMat(photo) { rgba ->
+        val work = resizeToWorkSize(rgba)
+        val board = BoardDetector.warp(work, detection.quad, size)
+        val bitmap = Bitmap.createBitmap(board.cols(), board.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(board, bitmap)
+        listOf(work, board).forEach { it.release() }
+        bitmap
+    }
+
+    private fun <T> withMat(photo: Bitmap, block: (Mat) -> T): T {
         val rgba = Mat()
         Utils.bitmapToMat(photo, rgba)
-        return scanAll(rgba).also { rgba.release() }
+        return try {
+            block(rgba)
+        } finally {
+            rgba.release()
+        }
     }
 
     private fun read(rgba: Mat, photo: Mat, detection: BoardDetector.Detection): ScanResult {

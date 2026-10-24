@@ -335,9 +335,10 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         onSelectBoard = { i ->
                             scope.launch {
                                 vm.select(i)?.let { (b, fen) ->
-                                    // Las casillas dudosas siguen al giro que tenga ahora ese diagrama.
-                                    val turned = b.flipped != (b.result.context?.flipped == true)
-                                    val marks = if (turned) b.result.doubtful.mapTo(mutableSetOf()) { 63 - it } else b.result.doubtful
+                                    // Al elegirlo ya está leído. Las dudosas siguen al giro que tenga ahora ese diagrama.
+                                    val r = b.result!!
+                                    val turned = b.flipped != (r.context?.flipped == true)
+                                    val marks = if (turned) r.doubtful.mapTo(mutableSetOf()) { 63 - it } else r.doubtful
                                     editor.load(com.pawneyes.chess.Position.fromFen(fen), marks)
                                     editor.flipped = b.flipped
                                 }
@@ -398,14 +399,18 @@ private fun ScanPanel(
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             state.boards.forEachIndexed { i, b ->
                                 val selected = i == state.index
-                                Image(
-                                    b.result.board.asImageBitmap(),
-                                    contentDescription = stringResource(R.string.scan_board_n, i + 1),
-                                    modifier = Modifier.size(44.dp)
-                                        .border(if (selected) 3.dp else 1.dp,
-                                            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                                        .clickable(enabled = !selected) { onSelectBoard(i) },
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Image(
+                                        b.thumbnail.asImageBitmap(),
+                                        contentDescription = stringResource(R.string.scan_board_n, i + 1),
+                                        modifier = Modifier.size(44.dp)
+                                            .border(if (selected) 3.dp else 1.dp,
+                                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                                            .clickable(enabled = !selected && state.loading == null) { onSelectBoard(i) },
+                                    )
+                                    // Los demás diagramas se leen al elegirlos (#23).
+                                    if (state.loading == i) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 3.dp)
+                                }
                             }
                         }
                     }
