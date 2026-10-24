@@ -132,4 +132,21 @@
     <string name="history_card_title">Escaneo del historial</string>
     <string name="history_card_hint">Lo que cambies en el tablero se guarda en esta entrada mientras veas esta tarjeta.</string>
     <string name="history_saved_hint">Se guarda en el historial con tus correcciones (menú ⋮).</string>
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_theme">Colores del tablero</string>
+    <string name="settings_theme_wood">Madera</string>
+    <string name="settings_theme_green">Verde</string>
+    <string name="settings_theme_blue">Azul</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_pieces">Piezas</string>
+    <string name="settings_pieces_chessnut">Chessnut</string>
+    <string name="settings_pieces_cburnett">Clásicas</string>
+    <string name="settings_pieces_merida">Mérida</string>
+    <string name="settings_pieces_fantasy">Fantasía</string>
+    <string name="settings_pieces_credit">Diseño: %1$s</string>
+    <string name="settings_notation">Notación</string>
+    <string name="settings_notation_spanish">Española (R D T A C)</string>
+    <string name="settings_notation_english">Inglesa (K Q R B N)</string>
+    <string name="settings_notation_hint">Para las jugadas en pantalla. El PGN que se comparte va siempre en inglés, que es el estándar.</string>
+    <string name="settings_coordinates">Coordenadas en el tablero</string>
 </resources>

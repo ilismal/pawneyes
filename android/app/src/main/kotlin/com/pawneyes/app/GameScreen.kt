@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.pawneyes.board.LocalPieceLetters
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -141,7 +142,7 @@ fun GameScreen(
                     }
                     else -> Text(stringResource(R.string.game_your_turn), style = MaterialTheme.typography.titleMedium)
                 }
-                val san = game.san()
+                val san = game.san(LocalPieceLetters.current)
                 Text(if (san.isEmpty()) stringResource(R.string.game_no_moves) else san.joinToString(" "),
                     style = MaterialTheme.typography.bodyMedium)
             }

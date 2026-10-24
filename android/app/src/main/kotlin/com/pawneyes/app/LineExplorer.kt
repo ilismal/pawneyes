@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.pawneyes.board.LocalPieceLetters
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -79,7 +80,7 @@ fun LineExplorer(
         Text(
             buildAnnotatedString {
                 if (i == 0) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(stringResource(R.string.explore_start)) }
-                line.san.forEachIndexed { k, san ->
+                line.san(LocalPieceLetters.current).forEachIndexed { k, san ->
                     append(if (k == 0 && i != 0) "" else "  ")
                     val text = if (k > 0 && san.contains("...")) san.substringAfter("... ") else san
                     if (k == i - 1) withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)) { append(text) }

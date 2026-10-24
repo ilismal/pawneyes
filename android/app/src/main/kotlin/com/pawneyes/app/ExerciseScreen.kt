@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.pawneyes.board.LocalPieceLetters
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -95,12 +96,12 @@ fun ExerciseScreen(
                         Text(stringResource(R.string.exercise_prompt), style = MaterialTheme.typography.titleMedium)
                         if (best == null) Busy(stringResource(R.string.exercise_preparing))
                     }
-                    exercise.verdict == null -> Busy(stringResource(R.string.exercise_checking, p.toSan(played)))
+                    exercise.verdict == null -> Busy(stringResource(R.string.exercise_checking, p.toSan(played, LocalPieceLetters.current)))
                     else -> {
                         val v = exercise.verdict
                         Text(stringResource(gradeText(v.grade)), style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold, color = gradeColor(v.grade))
-                        Text(stringResource(R.string.exercise_you_played, p.toSan(played)))
+                        Text(stringResource(R.string.exercise_you_played, p.toSan(played, LocalPieceLetters.current)))
                         when {
                             v.missedMate -> Text(stringResource(R.string.exercise_missed_mate))
                             v.allowsMate -> Text(stringResource(R.string.exercise_allows_mate))
@@ -111,7 +112,7 @@ fun ExerciseScreen(
                 }
                 if (exercise.showSolution && best != null) {
                     Text(stringResource(R.string.exercise_solution), style = MaterialTheme.typography.titleSmall)
-                    Text(p.lineToSan(best.pv.take(10)), style = MaterialTheme.typography.bodyMedium)
+                    Text(p.lineToSan(best.pv.take(10), LocalPieceLetters.current), style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

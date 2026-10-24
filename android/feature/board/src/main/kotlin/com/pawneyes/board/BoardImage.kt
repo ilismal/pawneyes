@@ -9,6 +9,7 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
+import androidx.compose.ui.graphics.toArgb
 import com.pawneyes.chess.Position
 import kotlin.math.hypot
 
@@ -17,8 +18,6 @@ import kotlin.math.hypot
  * colores, piezas, coordenadas, flechas y casillas resaltadas.
  */
 object BoardImage {
-    private const val LIGHT = 0xFFF0D9B5.toInt()
-    private const val DARK = 0xFFB58863.toInt()
     private const val ARROW = 0xCC15781B.toInt()
     private const val HIGHLIGHT = 0x80F6E05E.toInt()
 
@@ -28,8 +27,11 @@ object BoardImage {
         flipped: Boolean = false,
         arrows: List<Pair<Int, Int>> = emptyList(),
         highlighted: Set<Int> = emptySet(),
+        style: BoardStyle = BoardStyle(),
         size: Int = 1024,
     ): Bitmap {
+        val light = style.theme.light.toArgb()
+        val dark = style.theme.dark.toArgb()
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val cell = size / 8f
@@ -43,18 +45,18 @@ object BoardImage {
 
         for (row in 0 until 8) for (col in 0 until 8) {
             val square = squareAt(row, col, flipped)
-            val dark = (row + col) % 2 == 1
+            val isDark = (row + col) % 2 == 1
             val rect = RectF(col * cell, row * cell, (col + 1) * cell, (row + 1) * cell)
-            canvas.drawRect(rect, fill.apply { color = if (dark) DARK else LIGHT })
+            canvas.drawRect(rect, fill.apply { color = if (isDark) dark else light })
             if (square in highlighted) canvas.drawRect(rect, fill.apply { color = HIGHLIGHT })
             position[square]?.let { piece ->
-                val res = drawableFor(piece)
+                val res = style.pieces.drawable(piece)
                 val img = pieces.getOrPut(res) { BitmapFactory.decodeResource(context.resources, res) }
                 canvas.drawBitmap(img, Rect(0, 0, img.width, img.height), rect, filter)
             }
-            text.color = if (dark) LIGHT else DARK
-            if (col == 0) canvas.drawText("${8 - square / 8}", rect.left + cell * 0.05f, rect.top + text.textSize, text)
-            if (row == 7) {
+            text.color = if (isDark) light else dark
+            if (style.coordinates && col == 0) canvas.drawText("${8 - square / 8}", rect.left + cell * 0.05f, rect.top + text.textSize, text)
+            if (style.coordinates && row == 7) {
                 val file = "${'a' + square % 8}"
                 canvas.drawText(file, rect.right - text.measureText(file) - cell * 0.05f, rect.bottom - cell * 0.06f, text)
             }

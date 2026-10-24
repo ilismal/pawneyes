@@ -46,10 +46,11 @@ object Sharing {
         flipped: Boolean,
         arrows: List<Pair<Int, Int>>,
         highlighted: Set<Int> = emptySet(),
+        style: com.pawneyes.board.BoardStyle = com.pawneyes.board.BoardStyle(),
     ) {
         val dir = File(context.cacheDir, "shared").apply { mkdirs() }
         val file = File(dir, "tablero.png")
-        val bitmap = BoardImage.render(context, position, flipped, arrows, highlighted)
+        val bitmap = BoardImage.render(context, position, flipped, arrows, highlighted, style)
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
         val send = Intent(Intent.ACTION_SEND).apply {

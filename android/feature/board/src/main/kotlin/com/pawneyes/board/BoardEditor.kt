@@ -201,7 +201,7 @@ private fun PiecePalette(state: BoardEditorState) {
                     val piece = Piece(side, type)
                     Box(Modifier.weight(1f)) {
                         Cell(state.tool == EditTool.Place(piece), { state.tool = EditTool.Place(piece) }) {
-                            Image(painterResource(drawableFor(piece)), contentDescription = "${piece.fen}")
+                            Image(painterResource(LocalBoardStyle.current.pieces.drawable(piece)), contentDescription = "${piece.fen}")
                         }
                     }
                 }

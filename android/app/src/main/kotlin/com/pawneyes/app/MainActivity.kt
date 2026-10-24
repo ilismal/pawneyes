@@ -37,6 +37,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import com.pawneyes.board.LocalPieceLetters
+import com.pawneyes.board.LocalBoardStyle
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -109,11 +112,20 @@ private fun PawneyesTheme(content: @Composable () -> Unit) {
 @Composable
 private fun PawneyesApp(shared: MutableState<Uri?>) {
     PawneyesTheme {
+        val appContext = LocalContext.current.applicationContext
+        val settingsStore = remember { SettingsStore(appContext) }
+        val settings by settingsStore.settings.collectAsStateWithLifecycle(AppSettings())
+        val settingsScope = rememberCoroutineScope()
+        CompositionLocalProvider(
+            LocalBoardStyle provides settings.style,
+            LocalPieceLetters provides settings.letters,
+        ) {
         val vm: ScanViewModel = viewModel()
         val analysisVm: AnalysisViewModel = viewModel()
         val gameVm: GameViewModel = viewModel()
         var playSetup by rememberSaveable { mutableStateOf(false) }
         var history by rememberSaveable { mutableStateOf(false) }
+        var settingsOpen by rememberSaveable { mutableStateOf(false) }
         val editor = rememberBoardEditorState()
         var exploration by remember { mutableStateOf<Exploration?>(null) }
         // El motor analiza lo que se ve: la posición del editor o la de la línea que se recorre.
@@ -147,7 +159,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                 },
                 onClose = { camera = false },
             )
-            return@PawneyesTheme
+            return@CompositionLocalProvider
         }
         Scaffold(
             topBar = {
@@ -162,7 +174,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                             onClick = { picker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
                             enabled = idle,
                         ) { Text(stringResource(R.string.scan_gallery)) }
-                        TrainingMenu(vm, onHistory = { history = true })
+                        TrainingMenu(vm, onHistory = { history = true }, onSettings = { settingsOpen = true })
                     },
                 )
             },
@@ -185,6 +197,16 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
             val ex = analysisVm.exercise
             val game = gameVm.game
             val scope = rememberCoroutineScope()
+            if (settingsOpen) {
+                BackHandler { settingsOpen = false }
+                SettingsScreen(
+                    settings,
+                    onChange = { change -> settingsScope.launch { settingsStore.update(change) } },
+                    onBack = { settingsOpen = false },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
             if (history) {
                 BackHandler { history = false }
                 HistoryScreen(
@@ -231,7 +253,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                             onPgn = { Sharing.sharePgn(context, game.start, game.moves) },
                             onImage = {
                                 Sharing.shareImage(context, game.position, gameVm.human == com.pawneyes.chess.Side.BLACK, emptyList(),
-                                    last?.let { setOf(it.from, it.to) } ?: emptySet())
+                                    last?.let { setOf(it.from, it.to) } ?: emptySet(), settings.style)
                             },
                         )
                     },
@@ -269,7 +291,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     onShareImage = {
                         val last = explore.line.moves.getOrNull(explore.index - 1)
                         Sharing.shareImage(context, explore.position, editor.flipped, arrows,
-                            last?.let { setOf(it.from, it.to) } ?: emptySet())
+                            last?.let { setOf(it.from, it.to) } ?: emptySet(), settings.style)
                     },
                     modifier = Modifier.padding(padding),
                     analysisPanel = panel,
@@ -284,7 +306,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     }
                     ShareButton(
                         onPgn = { Sharing.sharePgn(context, editor.position, bestLine?.moves.orEmpty(), comment) },
-                        onImage = { Sharing.shareImage(context, editor.position, editor.flipped, arrows) },
+                        onImage = { Sharing.shareImage(context, editor.position, editor.flipped, arrows, style = settings.style) },
                     )
                 }
                 BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share) {
@@ -297,6 +319,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         })
                 }
             }
+        }
         }
     }
 }
@@ -402,7 +425,7 @@ private fun ScanPanel(
 
 /** Menú ⋮: exportar o borrar los escaneos guardados para entrenar. */
 @Composable
-private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit) {
+private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
@@ -414,6 +437,10 @@ private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.history_open, vm.historyEntries.size)) },
                 onClick = { open = false; onHistory() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.settings_title)) },
+                onClick = { open = false; onSettings() },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.training_export, n)) },

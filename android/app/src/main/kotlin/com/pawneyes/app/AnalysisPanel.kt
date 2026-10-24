@@ -12,6 +12,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.pawneyes.board.LocalPieceLetters
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -116,7 +117,7 @@ fun AnalysisPanel(
                     ) {
                         Text(line.whiteScore(side), Modifier.width(56.dp), fontFamily = FontFamily.Monospace,
                             style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        Text(position.lineToSan(line.pv.take(10)), style = MaterialTheme.typography.bodySmall,
+                        Text(position.lineToSan(line.pv.take(10), LocalPieceLetters.current), style = MaterialTheme.typography.bodySmall,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }

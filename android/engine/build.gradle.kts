@@ -75,6 +75,9 @@ abstract class BuildStockfish @Inject constructor(
                 "make", "-j${Runtime.getRuntime().availableProcessors()}", "build",
                 "ARCH=armv8", "COMP=ndk",
                 "KERNEL=Linux",  // si no, en un Mac el Makefile añade opciones de macOS
+                // Si no, el Makefile toma el commit de git del repositorio de la app (no el de
+                // Stockfish) y el binario cambiaría con cada commit nuestro.
+                "GIT_SHA=", "GIT_DATE=",
                 "EXTRACXXFLAGS=-DNNUE_EMBEDDING_OFF",
                 "EXTRALDFLAGS=-Wl,-z,max-page-size=16384",
             )

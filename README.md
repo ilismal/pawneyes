@@ -61,6 +61,8 @@
   [Maia](https://maiachess.com) (1100–1900), una red entrenada con partidas de Lichess para jugar
   como una persona de ese nivel, errores incluidos. Con deshacer y la partida en PGN.
 - Copiar el FEN, abrir la posición en Lichess o compartirla como PGN o como imagen.
+- **Ajustes**: colores del tablero (madera, verde, azul u oscuro), cuatro juegos de piezas,
+  coordenadas y notación con letras españolas o inglesas.
 - **Historial de escaneos**: cada escaneo se guarda (miniatura, posición con tus correcciones y
   fecha) y se puede etiquetar con el libro y la página, buscar y volver a abrir en el editor.
 - **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
@@ -210,6 +212,7 @@ español está en `ml/models/tessdata/`.
 ## Licencia
 
 [GPLv3](LICENSE). La app incluye [Stockfish](https://stockfishchess.org) (GPLv3), las piezas
-[chessnut](https://github.com/LexLuengas/chessnut-pieces) de Alexis Luengas (Apache 2.0),
+[chessnut](https://github.com/LexLuengas/chessnut-pieces) de Alexis Luengas (Apache 2.0), cburnett y
+merida (GPLv2+) y fantasy (MIT),
 OpenCV, LiteRT y Tesseract (Apache 2.0) y las redes de [Maia](https://github.com/CSSLab/maia-chess)
 (GPLv3), convertidas a LiteRT con `ml/maia/export.py`: ver [android/LICENSES.md](android/LICENSES.md).

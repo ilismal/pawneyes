@@ -1,6 +1,5 @@
 package com.pawneyes.board
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.aspectRatio
@@ -28,8 +27,6 @@ import com.pawneyes.chess.Position
 import com.pawneyes.chess.Side
 import kotlin.math.roundToInt
 
-private val LightSquare = Color(0xFFF0D9B5)
-private val DarkSquare = Color(0xFFB58863)
 private val MarkColor = Color(0xFFD32F2F)
 private val ArrowColor = Color(0xCC15781B)
 private val HighlightColor = Color(0x80F6E05E)  // última jugada
@@ -39,29 +36,9 @@ private val DotColor = Color(0x5A000000)  // destinos posibles al mover
 fun squareAt(row: Int, col: Int, flipped: Boolean): Int =
     if (flipped) (7 - row) * 8 + (7 - col) else row * 8 + col
 
-@DrawableRes
-fun drawableFor(piece: Piece): Int = when (piece.side) {
-    Side.WHITE -> when (piece.type) {
-        PieceType.PAWN -> R.drawable.piece_wp
-        PieceType.KNIGHT -> R.drawable.piece_wn
-        PieceType.BISHOP -> R.drawable.piece_wb
-        PieceType.ROOK -> R.drawable.piece_wr
-        PieceType.QUEEN -> R.drawable.piece_wq
-        PieceType.KING -> R.drawable.piece_wk
-    }
-    Side.BLACK -> when (piece.type) {
-        PieceType.PAWN -> R.drawable.piece_bp
-        PieceType.KNIGHT -> R.drawable.piece_bn
-        PieceType.BISHOP -> R.drawable.piece_bb
-        PieceType.ROOK -> R.drawable.piece_br
-        PieceType.QUEEN -> R.drawable.piece_bq
-        PieceType.KING -> R.drawable.piece_bk
-    }
-}
-
 @Composable
-private fun pieceImages(): Map<Piece, ImageBitmap> =
-    Piece.ALL.associateWith { ImageBitmap.imageResource(drawableFor(it)) }
+private fun pieceImages(set: PieceSet): Map<Piece, ImageBitmap> =
+    Piece.ALL.associateWith { ImageBitmap.imageResource(set.drawable(it)) }
 
 /**
  * Tablero de solo dibujo. `marked` resalta casillas (p. ej. las dudosas del
@@ -78,7 +55,10 @@ fun ChessBoard(
     dots: Set<Int> = emptySet(),
     onSquareClick: ((Int) -> Unit)? = null,
 ) {
-    val images = pieceImages()
+    val style = LocalBoardStyle.current
+    val images = pieceImages(style.pieces)
+    val lightSquare = style.theme.light
+    val darkSquare = style.theme.dark
     val textMeasurer = rememberTextMeasurer()
     val tap = if (onSquareClick == null) Modifier else Modifier.pointerInput(flipped, onSquareClick) {
         detectTapGestures { offset ->
@@ -96,7 +76,7 @@ fun ChessBoard(
                 val square = squareAt(row, col, flipped)
                 val dark = (row + col) % 2 == 1
                 val topLeft = Offset(col * cell, row * cell)
-                drawRect(if (dark) DarkSquare else LightSquare, topLeft, Size(cell, cell))
+                drawRect(if (dark) darkSquare else lightSquare, topLeft, Size(cell, cell))
                 if (square in highlighted) drawRect(HighlightColor, topLeft, Size(cell, cell))
                 position[square]?.let { piece ->
                     val x0 = (col * cell).roundToInt()
@@ -121,13 +101,13 @@ fun ChessBoard(
                         style = Stroke(width = w))
                 }
                 // Coordenadas: números en la columna izquierda, letras en la fila de abajo.
-                val ink = if (dark) LightSquare else DarkSquare
-                if (col == 0) {
+                val ink = if (dark) lightSquare else darkSquare
+                if (style.coordinates && col == 0) {
                     val rank = "${8 - square / 8}"
                     drawText(textMeasurer, rank, topLeft + Offset(cell * 0.05f, cell * 0.02f),
                         coordStyle.copy(color = ink))
                 }
-                if (row == 7) {
+                if (style.coordinates && row == 7) {
                     val file = "${'a' + square % 8}"
                     val layout = textMeasurer.measure(file, coordStyle)
                     drawText(layout, ink, topLeft + Offset(cell - layout.size.width - cell * 0.05f,

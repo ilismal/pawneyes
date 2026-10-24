@@ -75,7 +75,7 @@ fun MoveInputBoard(
                     for (type in listOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)) {
                         val move = options.first { it.promotion == type }
                         Image(
-                            painterResource(drawableFor(Piece(position.sideToMove, type))),
+                            painterResource(LocalBoardStyle.current.pieces.drawable(Piece(position.sideToMove, type))),
                             contentDescription = type.name,
                             modifier = Modifier.size(56.dp).clickable {
                                 promotion = null
