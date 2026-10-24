@@ -7,15 +7,16 @@ import android.graphics.Matrix
 import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.TorchState
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
-import androidx.annotation.OptIn
 import androidx.camera.view.PreviewView
 import androidx.camera.view.TransformExperimental
 import androidx.camera.view.transform.CoordinateTransform
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -34,7 +36,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -108,6 +112,11 @@ private fun CameraContent(onCaptured: (Bitmap) -> Unit, onClose: () -> Unit) {
     var progress by remember { mutableStateOf(0f) }
     var capturing by remember { mutableStateOf(false) }
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
+    // Zoom y linterna (#22). El pellizco sobre la vista ya hace zoom; el deslizador lo hace visible.
+    var zoom by remember { mutableStateOf(1f) }
+    var zoomRange by remember { mutableStateOf(1f..1f) }
+    var torch by remember { mutableStateOf(false) }
+    var hasTorch by remember { mutableStateOf(false) }
     val tracker = remember { StabilityTracker() }
     val executor = remember { Executors.newSingleThreadExecutor() }
 
@@ -160,7 +169,16 @@ private fun CameraContent(onCaptured: (Bitmap) -> Unit, onClose: () -> Unit) {
             }
         })
         controller.bindToLifecycle(lifecycleOwner)
+        controller.zoomState.observe(lifecycleOwner) { z ->
+            zoom = z.zoomRatio
+            zoomRange = z.minZoomRatio.coerceAtLeast(1f)..minOf(z.maxZoomRatio, MAX_ZOOM)
+            // La cámara ya está abierta: se sabe si tiene flash.
+            hasTorch = controller.cameraInfo?.hasFlashUnit() == true
+        }
+        controller.torchState.observe(lifecycleOwner) { torch = it == TorchState.ON }
         onDispose {
+            controller.zoomState.removeObservers(lifecycleOwner)
+            controller.torchState.removeObservers(lifecycleOwner)
             controller.clearImageAnalysisAnalyzer()
             controller.unbind()
             executor.shutdown()
@@ -208,16 +226,48 @@ private fun CameraContent(onCaptured: (Bitmap) -> Unit, onClose: () -> Unit) {
                 LinearProgressIndicator(progress = { progress }, Modifier.padding(top = 8.dp))
             }
         }
-        Row(
+        Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(24.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedButton(onClick = onClose) { Text(stringResource(R.string.camera_close), color = Color.White) }
-            Button(onClick = ::capture, enabled = !capturing) { Text(stringResource(R.string.camera_shoot)) }
+            // Solo si la cámara tiene zoom o linterna (la del emulador, p. ej., no tiene ninguno).
+            val zoomable = zoomRange.endInclusive > zoomRange.start + 0.05f
+            if (zoomable || hasTorch) {
+                Row(
+                    Modifier.fillMaxWidth().background(Color(0x99000000), MaterialTheme.shapes.medium)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (zoomable) {
+                        Text(stringResource(R.string.camera_zoom, zoom), color = Color.White)
+                        Slider(
+                            value = zoom.coerceIn(zoomRange),
+                            onValueChange = { controller.setZoomRatio(it) },
+                            valueRange = zoomRange,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    if (hasTorch) {
+                        TextButton(onClick = { controller.enableTorch(!torch) }) {
+                            Text(stringResource(if (torch) R.string.camera_torch_off else R.string.camera_torch_on), color = Color.White)
+                        }
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = onClose) { Text(stringResource(R.string.camera_close), color = Color.White) }
+                Button(onClick = ::capture, enabled = !capturing) { Text(stringResource(R.string.camera_shoot)) }
+            }
         }
     }
 }
+
+/** Más zoom digital ya no aporta: el escáner necesita detalle real. */
+private const val MAX_ZOOM = 4f
 
 private fun selector(size: Size) = ResolutionSelector.Builder()
     .setResolutionStrategy(ResolutionStrategy(size, ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))

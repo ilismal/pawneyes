@@ -7,4 +7,7 @@
     <string name="camera_close">Cerrar</string>
     <string name="camera_permission">Pawneyes necesita la cámara para fotografiar el diagrama. También puedes cerrar y elegir una foto de la galería.</string>
     <string name="camera_permission_retry">Dar permiso</string>
+    <string name="camera_zoom">%1$.1f×</string>
+    <string name="camera_torch_on">Linterna</string>
+    <string name="camera_torch_off">Apagar linterna</string>
 </resources>
