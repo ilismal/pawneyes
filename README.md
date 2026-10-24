@@ -40,6 +40,13 @@
   &nbsp;
   <img src="docs/screenshots/06-partida.png" alt="Partida contra Maia" width="260">
 </p>
+<p align="center">
+  <img src="docs/screenshots/07-varios-diagramas.png" alt="Elegir entre los diagramas de una página" width="260">
+  &nbsp;
+  <img src="docs/screenshots/08-jugadas-del-libro.png" alt="Jugadas del libro en notación descriptiva" width="260">
+  &nbsp;
+  <img src="docs/screenshots/09-ajustes.png" alt="Ajustes: colores, piezas y notación" width="260">
+</p>
 
 ## Qué hace
 
@@ -54,12 +61,13 @@
 - **Editor de posiciones**: colocar y quitar piezas, turno, enroques, FEN, deshacer, avisos de
   posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al bando que no mueve…).
 - **Análisis con Stockfish 16** dentro de la app: evaluación, las tres mejores líneas en notación
-  algebraica española (R, D, T, A, C) y una flecha con la mejor jugada.
+  algebraica (con letras españolas, R D T A C, o inglesas) y una flecha con la mejor jugada.
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
 - **Jugadas del libro**: escribe o pega una línea en notación descriptiva («1. P4R, P4R 2. C3AR,
   C3AD», «C(3A)×D») o algebraica y recórrela desde la posición del diagrama.
 - **Modo ejercicio**: busca la mejor jugada sin ver la evaluación; la app la compara con la de
-  Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes).
+  Stockfish y te dice si es correcta, una imprecisión o un error (y cuánto pierdes). Si ya has
+  visto el análisis de esa posición, no se ofrece.
 - **Jugar desde cualquier posición** contra Stockfish (de 1350 de Elo a plena fuerza) o contra
   [Maia](https://maiachess.com) (1100–1900), una red entrenada con partidas de Lichess para jugar
   como una persona de ese nivel, errores incluidos. Con deshacer y la partida en PGN.
