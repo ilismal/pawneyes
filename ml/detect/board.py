@@ -121,11 +121,12 @@ def _dark_squares(binary: np.ndarray, open_k: int) -> list[tuple[np.ndarray, flo
     return squares
 
 
-def _largest_diagonal_cluster(squares):
-    """Grupo más grande de casillas unidas como vecinas diagonales.
+def _diagonal_clusters(squares):
+    """Grupos de casillas unidas como vecinas diagonales, del más grande al más pequeño.
 
     En un tablero, las casillas oscuras vecinas están a ~√2 lados de distancia
     y tienen tamaños parecidos; letras y piezas sueltas no cumplen ambas cosas.
+    Con varios diagramas en la página (#10), cada uno forma su propio grupo.
     """
     n = len(squares)
     adj = [[] for _ in range(n)]
@@ -139,7 +140,7 @@ def _largest_diagonal_cluster(squares):
             if 1.15 < d < 1.75:
                 adj[i].append(j)
                 adj[j].append(i)
-    seen, best = set(), []
+    seen, comps = set(), []
     for start in range(n):
         if start in seen:
             continue
@@ -152,9 +153,10 @@ def _largest_diagonal_cluster(squares):
                 if nb not in seen:
                     seen.add(nb)
                     stack.append(nb)
-        if len(comp) > len(best):
-            best = comp
-    return best, adj
+        comps.append(comp)
+    # Orden estable: a igual tamaño, el que se encontró antes (como cuando solo se usaba el mayor).
+    comps.sort(key=lambda c: -len(c))
+    return comps, adj
 
 
 def _quads_from_lattice(squares, cluster, adj) -> list[np.ndarray]:
@@ -233,13 +235,39 @@ def _quads_from_squares(binary: np.ndarray) -> list[np.ndarray]:
     quads = []
     for open_k in (5, 9, 15, 25):
         squares = _dark_squares(binary, open_k)
-        cluster, adj = _largest_diagonal_cluster(squares)
-        quads += _quads_from_lattice(squares, cluster, adj)
+        clusters, adj = _diagonal_clusters(squares)
+        # Los grupos de menos de 10 casillas no dan rejilla (ver _quads_from_lattice).
+        for cluster in [c for c in clusters if len(c) >= 10][:MAX_BOARDS]:
+            quads += _quads_from_lattice(squares, cluster, adj)
     return quads
 
 
-def find_board_quad(img: np.ndarray) -> tuple[np.ndarray, float] | None:
-    """Devuelve (esquinas tl, tr, br, bl en coordenadas de `img`, puntuación), o None."""
+MAX_BOARDS = 4  # diagramas por foto como mucho (#10)
+
+
+MAX_OVERLAP = 0.2  # fracción del área del menor a partir de la que dos tableros son el mismo
+
+
+def _overlaps(a: np.ndarray, b: np.ndarray) -> bool:
+    """Dos cuadriláteros son el mismo tablero si el centro de uno cae dentro del otro o si
+    se solapan más de MAX_OVERLAP (un candidato a caballo entre dos diagramas)."""
+    a32, b32 = a.astype(np.float32), b.astype(np.float32)
+    ca, cb = a32.mean(axis=0), b32.mean(axis=0)
+    if (cv2.pointPolygonTest(b32, (float(ca[0]), float(ca[1])), False) >= 0
+            or cv2.pointPolygonTest(a32, (float(cb[0]), float(cb[1])), False) >= 0):
+        return True
+    inter, _ = cv2.intersectConvexConvex(a32, b32)
+    smaller = min(abs(cv2.contourArea(a32)), abs(cv2.contourArea(b32)))
+    return smaller > 0 and inter / smaller > MAX_OVERLAP
+
+
+def find_board_quads(img: np.ndarray, max_boards: int = MAX_BOARDS) -> list[tuple[np.ndarray, float]]:
+    """Todos los tableros de la foto (#10): [(esquinas tl, tr, br, bl, puntuación)], el mejor primero.
+
+    Los candidatos se recorren de mayor a menor puntuación; cada uno que no se solape
+    con uno ya elegido se ajusta y se queda si supera MIN_SCORE. El primero es
+    exactamente el que daba la búsqueda de un solo tablero.
+    """
     h, w = img.shape[:2]
     scale = WORK_SIZE / max(h, w)
     small = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
@@ -255,18 +283,30 @@ def find_board_quad(img: np.ndarray) -> tuple[np.ndarray, float] | None:
         candidates += _quads_from_contours(binary)
         candidates += _quads_from_squares(binary)
 
-    best, best_score = None, 0.0
-    for quad in candidates:
-        score = _score(features, quad)
-        if score > best_score:
-            best, best_score = quad, score
+    scored = [(quad, _score(features, quad)) for quad in candidates]
+    # Orden estable: a igual puntuación, el primer candidato (como la búsqueda original).
+    order = sorted(range(len(scored)), key=lambda i: -scored[i][1])
+    found: list[tuple[np.ndarray, float]] = []
+    tried: list[np.ndarray] = []
+    for i in order:
+        quad, score = scored[i]
+        if score <= 0 or len(found) >= max_boards:
+            break
+        if any(_overlaps(quad, t) for t in tried):
+            continue
+        tried.append(quad)
+        quad, score = refine_quad(features, quad, score)
+        if score >= MIN_SCORE and not any(_overlaps(quad, q) for q, _ in found):
+            found.append((quad, score))
+        elif not found:
+            return []  # el mejor candidato no llega: no hay tablero (como antes)
+    return [(q / scale, sc) for q, sc in found]
 
-    if best is None:
-        return None
-    best, best_score = refine_quad(features, best, best_score)
-    if best_score < MIN_SCORE:
-        return None
-    return best / scale, best_score
+
+def find_board_quad(img: np.ndarray) -> tuple[np.ndarray, float] | None:
+    """Devuelve (esquinas tl, tr, br, bl en coordenadas de `img`, puntuación), o None."""
+    found = find_board_quads(img, max_boards=1)
+    return found[0] if found else None
 
 
 def _score(features: list[np.ndarray], quad: np.ndarray) -> float:

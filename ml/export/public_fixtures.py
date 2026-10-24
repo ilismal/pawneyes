@@ -16,7 +16,7 @@ import numpy as np
 
 import synth.render as R
 from common.squares import placement_to_labels
-from detect.board import find_board_quad
+from detect.board import find_board_quads
 from export.fixtures import generate
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,6 +38,9 @@ BOARDS = [
      "fantasy", "solid", 0, {"flipped": True, "coords": False}),
     ("juegan-negras", "6k1/5ppp/8/8/8/8/5PPP/3R2K1", "chessnut", "hatch", 0,
      {"side": "b", "caption": "Juegan las negras."}),
+    # Dos diagramas en la misma página (#10); la posición es la del de arriba.
+    ("dos-diagramas", "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR", "fantasy", "hatch", 0,
+     {"second": "8/5k2/3p2p1/2pP1p2/2P2P2/4K1P1/8/8"}),
 ]
 
 
@@ -57,9 +60,13 @@ def photo(name: str, placement: str, set_name: str, dark: str, rotation: int, se
     R.random_style = style
     try:
         rng = np.random.default_rng(seed)
-        page, corners, s = R.render_board(rng, placement_to_labels(placement), set_name,
-                                          flipped=options.get("flipped", False),
-                                          caption=options.get("caption"))
+        if "second" in options:
+            page, corners, s = R.render_page(
+                rng, [placement_to_labels(placement), placement_to_labels(options["second"])], set_name)
+        else:
+            page, corners, s = R.render_board(rng, placement_to_labels(placement), set_name,
+                                              flipped=options.get("flipped", False),
+                                              caption=options.get("caption"))
         img, _, _ = R.photograph(rng, page, corners, s)
     finally:
         R.random_style = original_style
@@ -78,9 +85,10 @@ def main() -> None:
             options = rest[0] if rest else {}
             # Algunas distorsiones aleatorias salen demasiado duras para el detector:
             # se usa la primera semilla con la que encuentra el tablero (determinista).
+            wanted = 2 if "second" in options else 1
             for seed in range(100 * i, 100 * i + 100):
                 img = photo(name, placement, set_name, dark, rotation, seed, options)
-                if find_board_quad(img) is not None:
+                if len(find_board_quads(img)) == wanted:
                     break
             cv2.imwrite(str(src / f"{name}.png"), img)
             extra = [options.get("side", "-")] + (["flipped"] if options.get("flipped") else [])

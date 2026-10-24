@@ -1,5 +1,6 @@
 package com.pawneyes.vision
 
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.max
@@ -31,7 +32,21 @@ object BoardDetector {
      * `refine = false` se salta el ajuste fino (lo más lento): para la vista en vivo,
      * donde basta con un contorno aproximado; la foto capturada usa el detector completo.
      */
-    fun detect(image: Mat, refine: Boolean = true): Detection? {
+    fun detect(image: Mat, refine: Boolean = true): Detection? = detectAll(image, refine, maxBoards = 1).firstOrNull()
+
+    /** Diagramas por foto como mucho (#10). */
+    const val MAX_BOARDS = 4
+
+    /** Fracción del área del menor a partir de la que dos tableros son el mismo. */
+    const val MAX_OVERLAP = 0.2
+
+    /**
+     * Todos los tableros de la foto (#10), el mejor primero (port de find_board_quads):
+     * los candidatos se recorren de mayor a menor puntuación; cada uno que no se solape
+     * con uno ya elegido se ajusta y se queda si supera MIN_SCORE. El primero es
+     * exactamente el que da [detect].
+     */
+    fun detectAll(image: Mat, refine: Boolean = true, maxBoards: Int = MAX_BOARDS): List<Detection> {
         val scale = WORK_SIZE.toDouble() / max(image.rows(), image.cols())
         val small = Mat()
         Imgproc.resize(image, small, Size(), scale, scale, Imgproc.INTER_AREA)
@@ -50,19 +65,46 @@ object BoardDetector {
             candidates += quadsFromSquares(binary)
         }
 
-        var best: DoubleArray? = null
-        var bestScore = 0.0
-        for (quad in candidates) {
-            val s = score(features, quad)
-            if (s > bestScore) {
-                best = quad
-                bestScore = s
+        val scored = candidates.map { it to score(features, it) }
+        // sortedByDescending es estable: a igual puntuación, el primer candidato (como antes).
+        val order = scored.indices.sortedByDescending { scored[it].second }
+        val found = mutableListOf<Pair<DoubleArray, Double>>()
+        val tried = mutableListOf<DoubleArray>()
+        for (i in order) {
+            val (quad, s) = scored[i]
+            if (s <= 0 || found.size >= maxBoards) break
+            if (tried.any { overlaps(quad, it) }) continue
+            tried += quad
+            val (refined, refinedScore) = if (refine) refineQuad(features, quad, s) else quad to s
+            if (refinedScore >= MIN_SCORE && found.none { overlaps(refined, it.first) }) {
+                found += refined to refinedScore
+            } else if (found.isEmpty()) {
+                return emptyList()  // el mejor candidato no llega: no hay tablero
             }
         }
-        if (best == null) return null
-        val (refined, refinedScore) = if (refine) refineQuad(features, best, bestScore) else best to bestScore
-        if (refinedScore < MIN_SCORE) return null
-        return Detection(DoubleArray(8) { refined[it] / scale }, refinedScore)
+        return found.map { (q, sc) -> Detection(DoubleArray(8) { q[it] / scale }, sc) }
+    }
+
+    /**
+     * Dos cuadriláteros son el mismo tablero si el centro de uno cae dentro del otro o si
+     * se solapan más de [MAX_OVERLAP] (un candidato a caballo entre dos diagramas).
+     */
+    private fun overlaps(a: DoubleArray, b: DoubleArray): Boolean {
+        val pa = MatOfPoint2f(*points(a))
+        val pb = MatOfPoint2f(*points(b))
+        try {
+            val ca = Point((0 until 4).sumOf { a[2 * it] } / 4, (0 until 4).sumOf { a[2 * it + 1] } / 4)
+            val cb = Point((0 until 4).sumOf { b[2 * it] } / 4, (0 until 4).sumOf { b[2 * it + 1] } / 4)
+            if (Geometry.pointPolygonTest(pb, ca, false) >= 0 || Geometry.pointPolygonTest(pa, cb, false) >= 0) return true
+            val out = Mat()
+            val inter = Geometry.intersectConvexConvex(pa, pb, out).toDouble()
+            out.release()
+            val smaller = min(abs(Geometry.contourArea(pa)), abs(Geometry.contourArea(pb)))
+            return smaller > 0 && inter / smaller > MAX_OVERLAP
+        } finally {
+            pa.release()
+            pb.release()
+        }
     }
 
     /** Endereza el cuadrilátero a size×size (como warp_board de Python). */
@@ -229,8 +271,11 @@ object BoardDetector {
         }
     }
 
-    /** Grupo más grande de casillas oscuras unidas como vecinas diagonales. */
-    private fun largestDiagonalCluster(squares: List<DarkSquare>): Pair<List<Int>, List<List<Int>>> {
+    /**
+     * Grupos de casillas oscuras unidas como vecinas diagonales, del más grande al más
+     * pequeño: con varios diagramas en la página (#10), cada uno forma el suyo.
+     */
+    private fun diagonalClusters(squares: List<DarkSquare>): Pair<List<List<Int>>, List<List<Int>>> {
         val n = squares.size
         val adj = List(n) { mutableListOf<Int>() }
         for (i in 0 until n) for (j in i + 1 until n) {
@@ -244,7 +289,7 @@ object BoardDetector {
             }
         }
         val seen = BooleanArray(n)
-        var best = emptyList<Int>()
+        val comps = mutableListOf<List<Int>>()
         for (start in 0 until n) {
             if (seen[start]) continue
             val comp = mutableListOf<Int>()
@@ -258,9 +303,10 @@ object BoardDetector {
                     stack.addLast(nb)
                 }
             }
-            if (comp.size > best.size) best = comp
+            comps += comp
         }
-        return best to adj
+        // Estable: a igual tamaño, el que se encontró antes (como cuando solo se usaba el mayor).
+        return comps.sortedByDescending { it.size } to adj
     }
 
     private fun median(v: List<Double>): Double {
@@ -346,7 +392,8 @@ object BoardDetector {
 
     private fun quadsFromSquares(binary: Mat): List<DoubleArray> = intArrayOf(5, 9, 15, 25).flatMap { k ->
         val squares = darkSquares(binary, k)
-        val (cluster, adj) = largestDiagonalCluster(squares)
-        quadsFromLattice(squares, cluster, adj)
+        val (clusters, adj) = diagonalClusters(squares)
+        // Los grupos de menos de 10 casillas no dan rejilla (ver quadsFromLattice).
+        clusters.filter { it.size >= 10 }.take(MAX_BOARDS).flatMap { quadsFromLattice(squares, it, adj) }
     }
 }

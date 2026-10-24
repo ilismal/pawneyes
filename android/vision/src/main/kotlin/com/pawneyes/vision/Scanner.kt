@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import com.pawneyes.chess.Piece
 import com.pawneyes.chess.Position
+import kotlin.math.hypot
 import kotlin.math.max
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
@@ -38,10 +39,33 @@ class Scanner(private val classifier: SquareClassifier, private val text: TextRe
         return scan(rgba).also { rgba.release() }
     }
 
-    /** `rgba`: foto RGBA (CV_8UC4) de cualquier tamaño. */
+    /** `rgba`: foto RGBA (CV_8UC4) de cualquier tamaño. El mejor tablero, o null si no hay. */
     fun scan(rgba: Mat): ScanResult? {
         val photo = resizeToWorkSize(rgba)
-        val detection = BoardDetector.detect(photo) ?: return null
+        val detection = BoardDetector.detect(photo)
+        val result = detection?.let { read(rgba, photo, it) }
+        photo.release()
+        return result
+    }
+
+    /**
+     * Todos los diagramas de la foto (#10), en orden de lectura: de arriba abajo y, a la
+     * misma altura, de izquierda a derecha. Vacía si no hay ninguno.
+     */
+    fun scanAll(rgba: Mat): List<ScanResult> {
+        val photo = resizeToWorkSize(rgba)
+        val results = readingOrder(BoardDetector.detectAll(photo)).map { read(rgba, photo, it) }
+        photo.release()
+        return results
+    }
+
+    fun scanAll(photo: Bitmap): List<ScanResult> {
+        val rgba = Mat()
+        Utils.bitmapToMat(photo, rgba)
+        return scanAll(rgba).also { rgba.release() }
+    }
+
+    private fun read(rgba: Mat, photo: Mat, detection: BoardDetector.Detection): ScanResult {
         val color = BoardDetector.warp(photo, detection.quad)
         val board = Mat()
         Imgproc.cvtColor(color, board, Imgproc.COLOR_RGBA2GRAY)
@@ -53,7 +77,7 @@ class Scanner(private val classifier: SquareClassifier, private val text: TextRe
         val upright = SquareCropper.rotate(board, reading.rotation)
         val bitmap = Bitmap.createBitmap(upright.cols(), upright.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(upright, bitmap)
-        listOf(photo, color, board, upright).forEach { it.release() }
+        listOf(color, board, upright).forEach { it.release() }
         val context = text?.let { reader ->
             // El texto se lee en la foto original: con la reducida se pierden letras.
             val f = VisionSpec.PHOTO_PX.toDouble() / max(rgba.rows(), rgba.cols())
@@ -83,6 +107,19 @@ class Scanner(private val classifier: SquareClassifier, private val text: TextRe
             val out = Mat()
             Imgproc.resize(rgba, out, Size(), f, f, Imgproc.INTER_AREA)
             return out
+        }
+
+        /** De arriba abajo; dos tableros cuyo centro está a menos de medio tablero de altura van en la misma fila. */
+        fun readingOrder(found: List<BoardDetector.Detection>): List<BoardDetector.Detection> {
+            fun cx(d: BoardDetector.Detection) = (0 until 4).sumOf { d.quad[2 * it] } / 4
+            fun cy(d: BoardDetector.Detection) = (0 until 4).sumOf { d.quad[2 * it + 1] } / 4
+            fun side(d: BoardDetector.Detection) = hypot(d.quad[2] - d.quad[0], d.quad[3] - d.quad[1])
+            val rows = mutableListOf<MutableList<BoardDetector.Detection>>()
+            for (d in found.sortedBy { cy(it) }) {
+                val row = rows.lastOrNull()
+                if (row != null && cy(d) - cy(row.first()) < side(row.first()) / 2) row += d else rows += mutableListOf(d)
+            }
+            return rows.flatMap { row -> row.sortedBy { cx(it) } }
         }
 
         fun create(context: Context): Scanner {

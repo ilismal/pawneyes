@@ -149,4 +149,9 @@
     <string name="settings_notation_english">Inglesa (K Q R B N)</string>
     <string name="settings_notation_hint">Para las jugadas en pantalla. El PGN que se comparte va siempre en inglés, que es el estándar.</string>
     <string name="settings_coordinates">Coordenadas en el tablero</string>
+    <plurals name="scan_boards">
+        <item quantity="one">%1$d diagrama en la foto · viendo el %2$d</item>
+        <item quantity="other">%1$d diagramas en la foto · viendo el %2$d. Toca otro para leerlo.</item>
+    </plurals>
+    <string name="scan_board_n">Diagrama %1$d</string>
 </resources>

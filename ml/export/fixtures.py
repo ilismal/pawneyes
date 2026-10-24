@@ -15,6 +15,7 @@ y en manifest.json, para cada una:
   logits[k][casilla][clase]  salida del modelo TFLite para el tablero girado
                              k×90° (np.rot90, antihorario)
   quad           esquinas del tablero en la foto reducida (tl, tr, br, bl)
+  quads          esquinas de todos los tableros de la foto, el mejor primero (#10)
   rotation       k elegido por predict_board
   placement_raw  lectura sin reglas;  placement  lectura con reglas, ya girada si
                  el diagrama está impreso desde el lado de las negras
@@ -35,7 +36,7 @@ from caption.context import read_context
 from common.legality import fix_position
 from common.squares import (BOARD_PX, CLASSES, INPUT_PX, MARGIN, crop_squares,
                             labels_to_placement, placement_to_labels)
-from detect.board import find_board_quad, warp_board
+from detect.board import find_board_quad, find_board_quads, warp_board
 from export.export_tflite import TFLiteModel
 from train.data import EXAMPLES, predict_board
 
@@ -84,6 +85,7 @@ def generate(src: Path, out: Path) -> None:
             "name": stem,
             "photo": f"{stem}.photo.png",
             "quad": quad.round(2).tolist(),
+            "quads": [q.round(2).tolist() for q, _ in find_board_quads(photo)],
             "board": f"{stem}.board.png",
             "squares": f"{stem}.squares.bin",
             "rotation": int(k),

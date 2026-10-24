@@ -99,6 +99,28 @@ class VisionParityTest {
         assertTrue("esquina a $worst px", worst < 3.0)
     }
 
+    /** #10: los mismos tableros que Python, en el mismo orden (el mejor primero). */
+    @Test
+    fun allBoardsMatchPython() {
+        var worst = 0.0
+        for ((dir, b) in boards) {
+            val name = "$dir/${b.getString("name")}"
+            val found = BoardDetector.detectAll(rgba("$dir/${b.getString("photo")}"))
+            val expected = b.getJSONArray("quads")
+            assertEquals("$name: número de tableros", expected.length(), found.size)
+            for (k in found.indices) {
+                val e = expected.getJSONArray(k)
+                for (i in 0 until 4) {
+                    val p = e.getJSONArray(i)
+                    worst = maxOf(worst, hypot(found[k].quad[2 * i] - p.getDouble(0), found[k].quad[2 * i + 1] - p.getDouble(1)))
+                }
+            }
+            if (found.size > 1) log("detector $name: ${found.size} tableros")
+        }
+        log("detector (todos): esquina más alejada a ${"%.2f".format(worst)} px")
+        assertTrue("esquina a $worst px", worst < 3.0)
+    }
+
     @Test
     fun scanMatchesPython() {
         Scanner(SquareClassifier.fromAssets(context), TextReader.create(context)).use { scanner ->

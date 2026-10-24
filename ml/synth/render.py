@@ -153,7 +153,8 @@ def _random_text(rng: np.random.Generator, canvas: np.ndarray, region, style: St
 
 
 def render_board(rng: np.random.Generator, labels: np.ndarray, set_name: str,
-                 flipped: bool = False, caption: str | None = None
+                 flipped: bool = False, caption: str | None = None,
+                 s: int | None = None, st: "Style | None" = None,
                  ) -> tuple[np.ndarray, np.ndarray, int]:
     """Página con el diagrama. Devuelve (imagen float32, esquinas tl,tr,br,bl, lado casilla).
 
@@ -162,8 +163,11 @@ def render_board(rng: np.random.Generator, labels: np.ndarray, set_name: str,
     """
     if flipped:
         labels = np.asarray(labels)[::-1]
-    s = int(rng.integers(36, 84))
-    st = random_style(rng, s)
+    # `s` y `st` dados: varios diagramas con el mismo estilo en una página (render_page).
+    if s is None:
+        s = int(rng.integers(36, 84))
+    if st is None:
+        st = random_style(rng, s)
     board_px = 8 * s
     m = [int(s * rng.uniform(0.8, 2.6)) for _ in range(4)]  # izq, arriba, der, abajo
     if caption is not None:
@@ -258,6 +262,25 @@ def render_board(rng: np.random.Generator, labels: np.ndarray, set_name: str,
     corners = np.array([[bx, by], [bx + board_px, by], [bx + board_px, by + board_px],
                         [bx, by + board_px]], np.float32)
     return canvas, corners, s
+
+
+def render_page(rng: np.random.Generator, boards: list[np.ndarray], set_name: str
+                ) -> tuple[np.ndarray, np.ndarray, int]:
+    """Una página con varios diagramas, uno debajo de otro y con el mismo estilo (#10).
+
+    Devuelve (imagen, esquinas de todos los tableros seguidas (4·n × 2), lado de casilla).
+    """
+    s = int(rng.integers(36, 60))
+    st = random_style(rng, s)
+    parts = [render_board(rng, labels, set_name, s=s, st=st) for labels in boards]
+    w = max(p.shape[1] for p, _, _ in parts)
+    pages, corners, y = [], [], 0
+    for page, c, _ in parts:
+        pad = w - page.shape[1]
+        pages.append(np.pad(page, ((0, 0), (0, pad)), constant_values=st.paper))
+        corners.append(c + [0, y])
+        y += page.shape[0]
+    return np.vstack(pages), np.vstack(corners).astype(np.float32), s
 
 
 def photograph(rng: np.random.Generator, page: np.ndarray, corners: np.ndarray, s: int

@@ -18,23 +18,38 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Un diagrama leído. `flipped`: la lectura se ha girado porque parece impreso desde las
+ * negras. `entryId`: su entrada del historial (se crea al verlo), que recoge las
+ * correcciones mientras se ve la tarjeta.
+ */
+class ScannedBoard(
+    val result: ScanResult,
+    val flipped: Boolean = result.context?.flipped == true,
+    val saved: Boolean = false,
+    val entryId: String? = null,
+) {
+    fun copy(flipped: Boolean = this.flipped, saved: Boolean = this.saved, entryId: String? = this.entryId) =
+        ScannedBoard(result, flipped, saved, entryId)
+}
+
 sealed interface ScanState {
     data object Idle : ScanState
     data object Scanning : ScanState
 
     /**
+     * Los diagramas de la foto (#10), en orden de lectura, y el que se está viendo.
      * `photo`: la foto escaneada, reducida, por si se guarda para entrenar.
-     * `flipped`: la lectura se ha girado porque el diagrama parece impreso desde las negras.
-     * `entryId`: su entrada del historial, que recoge las correcciones mientras se ve la tarjeta.
      */
-    class Done(
-        val result: ScanResult,
-        val millis: Long,
-        val photo: Bitmap,
-        val saved: Boolean = false,
-        val flipped: Boolean = result.context?.flipped == true,
-        val entryId: String? = null,
-    ) : ScanState
+    class Done(val boards: List<ScannedBoard>, val index: Int, val millis: Long, val photo: Bitmap) : ScanState {
+        val board: ScannedBoard get() = boards[index]
+        val result: ScanResult get() = board.result
+        val flipped: Boolean get() = board.flipped
+        val saved: Boolean get() = board.saved
+        val entryId: String? get() = board.entryId
+
+        fun with(b: ScannedBoard, at: Int = index) = Done(boards.toMutableList().also { it[at] = b }, at, millis, photo)
+    }
 
     /** Un escaneo reabierto desde el historial; las correcciones también se guardan en él. */
     class FromHistory(val entry: HistoryEntry, val thumbnail: Bitmap?) : ScanState
@@ -62,18 +77,19 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
             state = try {
                 val start = SystemClock.elapsedRealtime()
                 var kept: Bitmap? = null
-                val result = withContext(Dispatchers.Default) {
+                val results = withContext(Dispatchers.Default) {
                     val bitmap = photo()
                     kept = reduced(bitmap)
-                    scanner.scan(bitmap)
+                    scanner.scanAll(bitmap)
                 }
                 val millis = SystemClock.elapsedRealtime() - start
-                Log.i("Pawneyes", "escaneo en $millis ms")
-                if (result == null) ScanState.NoBoard
+                Log.i("Pawneyes", "escaneo en $millis ms: ${results.size} diagramas")
+                if (results.isEmpty()) ScanState.NoBoard
                 else {
                     // Al historial antes de cargarlo en el editor: así sus correcciones ya van a la entrada.
-                    val entry = withContext(Dispatchers.IO) { addToHistory(result) }
-                    ScanState.Done(result, millis, kept!!, entryId = entry.id).also { onResult(result) }
+                    val entry = withContext(Dispatchers.IO) { addToHistory(results[0]) }
+                    val boards = results.mapIndexed { i, r -> ScannedBoard(r, entryId = if (i == 0) entry.id else null) }
+                    ScanState.Done(boards, 0, millis, kept!!).also { onResult(results[0]) }
                 }
             } catch (e: Exception) {
                 Log.e("Pawneyes", "error al escanear", e)
@@ -98,11 +114,15 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
         if (done.saved) return
         // Se entrena con el tablero tal como está impreso: si se ha girado, se deshace el giro.
         val printed = if (done.flipped) Position.fromFen(fen).rotated().toFen() else fen
+        // Con varios diagramas se guarda solo el recorte de este: el entrenamiento busca un tablero por foto.
+        val photo = if (done.boards.size > 1) cropTo(done.photo, done.result.detection.quad) else done.photo
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { training.save(done.photo, done.result.reading.rotation, printed) }
+            withContext(Dispatchers.IO) { training.save(photo, done.result.reading.rotation, printed) }
             trainingCount = training.count()
-            if (state === done) {
-                state = ScanState.Done(done.result, done.millis, done.photo, saved = true, done.flipped, done.entryId)
+            (state as? ScanState.Done)?.let { now ->
+                val i = now.boards.indexOfFirst { it.result === done.result }
+                if (i >= 0) state = ScanState.Done(now.boards.toMutableList().also { it[i] = it[i].copy(saved = true) },
+                    now.index, now.millis, now.photo)
             }
         }
     }
@@ -110,8 +130,39 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
     /** El usuario corrige la orientación deducida: devuelve la nueva. */
     fun toggleFlipped(): Boolean {
         val done = state as? ScanState.Done ?: return false
-        state = ScanState.Done(done.result, done.millis, done.photo, done.saved, !done.flipped, done.entryId)
+        state = done.with(done.board.copy(flipped = !done.flipped))
         return !done.flipped
+    }
+
+    /**
+     * Pasa a otro diagrama de la foto (#10). Devuelve el diagrama y su posición tal como
+     * quedó en el historial (con las correcciones, si ya se había visto) para el editor.
+     */
+    suspend fun select(index: Int): Pair<ScannedBoard, String>? {
+        val done = state as? ScanState.Done ?: return null
+        val b = done.boards.getOrNull(index) ?: return null
+        pendingSave?.join()  // que las correcciones del diagrama que se deja queden guardadas
+        // Cada diagrama entra en el historial la primera vez que se ve.
+        val entry = withContext(Dispatchers.IO) {
+            b.entryId?.let { id -> history.entries().find { it.id == id } } ?: addToHistory(b.result)
+        }
+        val now = state as? ScanState.Done ?: return null
+        val selected = b.copy(entryId = entry.id)
+        state = now.with(selected, index)
+        return selected to entry.fen
+    }
+
+    /** Recorte de la foto reducida alrededor de un tablero (esquinas en la escala del escáner), con margen. */
+    private fun cropTo(photo: Bitmap, quad: DoubleArray): Bitmap {
+        val f = maxOf(photo.width, photo.height).toDouble() / com.pawneyes.vision.VisionSpec.PHOTO_PX
+        val xs = (0 until 4).map { quad[2 * it] * f }
+        val ys = (0 until 4).map { quad[2 * it + 1] * f }
+        val margin = 0.15 * maxOf(xs.max() - xs.min(), ys.max() - ys.min())
+        val x0 = (xs.min() - margin).toInt().coerceIn(0, photo.width - 1)
+        val y0 = (ys.min() - margin).toInt().coerceIn(0, photo.height - 1)
+        val x1 = (xs.max() + margin).toInt().coerceIn(x0 + 1, photo.width)
+        val y1 = (ys.max() + margin).toInt().coerceIn(y0 + 1, photo.height)
+        return Bitmap.createBitmap(photo, x0, y0, x1 - x0, y1 - y0)
     }
 
     private val history = ScanHistory(java.io.File(app.filesDir, "historial"))
@@ -140,11 +191,15 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
         }
 
     private var pendingSave: kotlinx.coroutines.Job? = null
+    private var pendingId: String? = null
 
     /** El editor ha cambiado: si se está viendo la tarjeta de un escaneo, se guarda en su entrada. */
     fun editorChanged(fen: String, flipped: Boolean) {
         val id = currentEntryId ?: return
-        pendingSave?.cancel()
+        // Solo se descarta la escritura pendiente de esta misma entrada: si se acaba de pasar
+        // a otro diagrama, la del anterior se completa.
+        if (pendingId == id) pendingSave?.cancel()
+        pendingId = id
         pendingSave = viewModelScope.launch {
             kotlinx.coroutines.delay(SAVE_DELAY_MS)  // tras una ráfaga de cambios, una sola escritura
             withContext(Dispatchers.IO) { history.update(id) { it.copy(fen = fen, flipped = flipped) } }

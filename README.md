@@ -45,7 +45,8 @@
 
 - **Escanea un diagrama** desde la cámara (con autocaptura cuando el tablero se queda quieto),
   desde la galería o compartiendo una foto con la app. Detecta el tablero aunque la foto esté
-  girada o en perspectiva, y marca en rojo las casillas de las que no está seguro.
+  girada o en perspectiva, y marca en rojo las casillas de las que no está seguro. Si en la
+  página hay varios diagramas, los lee todos y se elige cuál cargar.
 - **Lee el texto de la página** (con Tesseract, en el móvil): el turno, si el pie lo dice
   («Juegan las negras», «White to move») o se deduce de la jugada impresa junto al diagrama
   («5.Cf3», «19. ..., T1A»), y si el diagrama está impreso desde el lado de las negras (por

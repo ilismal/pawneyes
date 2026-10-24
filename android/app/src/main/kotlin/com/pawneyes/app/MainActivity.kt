@@ -11,6 +11,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -312,6 +314,17 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                 BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share) {
                     ScanPanel(vm.state, editor.marked.size, onDismiss = vm::dismiss,
                         onSaveForTraining = { vm.saveForTraining(editor.position.toFen()) },
+                        onSelectBoard = { i ->
+                            scope.launch {
+                                vm.select(i)?.let { (b, fen) ->
+                                    // Las casillas dudosas siguen al giro que tenga ahora ese diagrama.
+                                    val turned = b.flipped != (b.result.context?.flipped == true)
+                                    val marks = if (turned) b.result.doubtful.mapTo(mutableSetOf()) { 63 - it } else b.result.doubtful
+                                    editor.load(com.pawneyes.chess.Position.fromFen(fen), marks)
+                                    editor.flipped = b.flipped
+                                }
+                            }
+                        },
                         onToggleFlipped = {
                             // Se gira la posición y la vista: el tablero sigue viéndose como en el libro.
                             editor.flipped = vm.toggleFlipped()
@@ -340,6 +353,7 @@ private fun ScanPanel(
     marked: Int,
     onDismiss: () -> Unit,
     onSaveForTraining: () -> Unit,
+    onSelectBoard: (Int) -> Unit,
     onToggleFlipped: () -> Unit,
 ) {
     when (state) {
@@ -360,6 +374,23 @@ private fun ScanPanel(
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.scan_title), style = MaterialTheme.typography.titleSmall)
+                    if (state.boards.size > 1) {
+                        Text(pluralStringResource(R.plurals.scan_boards, state.boards.size, state.boards.size, state.index + 1),
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            state.boards.forEachIndexed { i, b ->
+                                val selected = i == state.index
+                                Image(
+                                    b.result.board.asImageBitmap(),
+                                    contentDescription = stringResource(R.string.scan_board_n, i + 1),
+                                    modifier = Modifier.size(44.dp)
+                                        .border(if (selected) 3.dp else 1.dp,
+                                            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                                        .clickable(enabled = !selected) { onSelectBoard(i) },
+                                )
+                            }
+                        }
+                    }
                     Text(
                         if (marked > 0) pluralStringResource(R.plurals.scan_doubtful, marked, marked)
                         else stringResource(R.string.scan_no_doubts),
