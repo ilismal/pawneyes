@@ -4,6 +4,7 @@ import android.content.ClipData
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,11 +16,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +60,7 @@ import com.pawneyes.chess.Position
 import com.pawneyes.chess.Side
 import com.pawneyes.chess.Square
 import com.pawneyes.chess.issues
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 sealed interface EditTool {
@@ -95,6 +99,12 @@ class BoardEditorState(initial: Position, flipped: Boolean = false, marked: Set<
         position = p
         marked = m
     }
+
+    /** Corrige una casilla dudosa con una de las opciones del escáner y la da por revisada. */
+    fun resolve(square: Int, piece: Piece?) = change(position.with(square, piece), marked - square)
+
+    /** Da por revisada una casilla dudosa sin cambiarla. */
+    fun accept(square: Int) = change(position, marked - square)
 
     /** Coloca la pieza elegida; tocar una casilla con esa misma pieza la quita. */
     fun tap(square: Int) {
@@ -150,14 +160,27 @@ fun BoardEditor(
     arrows: List<Pair<Int, Int>> = emptyList(),
     belowBoard: @Composable () -> Unit = {},
     shareButton: @Composable () -> Unit = {},
+    /** Opciones del escáner para una casilla dudosa (#21); null si no hay lectura que consultar. */
+    alternativesFor: ((Int) -> List<Pair<Piece?, Float>>)? = null,
     header: @Composable () -> Unit = {},
 ) {
+    var choosing by remember { mutableStateOf<Int?>(null) }
+    val onSquare: (Int) -> Unit = { sq ->
+        val options = alternativesFor?.invoke(sq).orEmpty()
+        if (sq in state.marked && options.size > 1) choosing = sq else state.tap(sq)
+    }
+    choosing?.let { sq ->
+        AlternativesDialog(sq, alternativesFor!!(sq),
+            onPick = { piece -> state.resolve(sq, piece); choosing = null },
+            onKeep = { state.accept(sq); choosing = null },
+            onDismiss = { choosing = null })
+    }
     Column(
         modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         header()
-        ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows, onSquareClick = state::tap)
+        ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows, onSquareClick = onSquare)
         belowBoard()
         SideToMove(state)  // justo bajo el tablero: es lo primero que hay que decidir tras escanear
         PiecePalette(state)
@@ -334,5 +357,64 @@ private fun Exports(position: Position, shareButton: @Composable () -> Unit) {
             Text(stringResource(R.string.open_lichess))
         }
         shareButton()
+    }
+}
+
+/** Las opciones del modelo para una casilla dudosa, de más a menos probable, con la pieza y su confianza. */
+@Composable
+private fun AlternativesDialog(
+    square: Int,
+    options: List<Pair<Piece?, Float>>,
+    onPick: (Piece?) -> Unit,
+    onKeep: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val style = LocalBoardStyle.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.alternatives_title, Square.name(square))) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.alternatives_hint), style = MaterialTheme.typography.bodySmall)
+                options.forEachIndexed { i, (piece, p) ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { if (i == 0) onKeep() else onPick(piece) }.padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(Modifier.size(40.dp).background(style.theme.light), contentAlignment = Alignment.Center) {
+                            piece?.let { Image(painterResource(style.pieces.drawable(it)), contentDescription = null, Modifier.size(36.dp)) }
+                        }
+                        // La leída puede no ser la más probable: las reglas de legalidad (un rey de cada
+                        // color, como mucho 8 peones…) pueden haber descartado la primera opción del modelo.
+                        val ruled = i == 0 && options.drop(1).any { it.second > p }
+                        Text(
+                            stringResource(
+                                when {
+                                    ruled -> R.string.alternatives_current_ruled
+                                    i == 0 -> R.string.alternatives_current
+                                    else -> R.string.alternatives_option
+                                },
+                                stringResource(pieceName(piece)), (p * 100).roundToInt()),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onKeep) { Text(stringResource(R.string.alternatives_keep)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.alternatives_cancel)) } },
+    )
+}
+
+private fun pieceName(piece: Piece?): Int = when (piece?.side) {
+    null -> R.string.piece_empty
+    Side.WHITE -> when (piece.type) {
+        PieceType.KING -> R.string.piece_wk; PieceType.QUEEN -> R.string.piece_wq; PieceType.ROOK -> R.string.piece_wr
+        PieceType.BISHOP -> R.string.piece_wb; PieceType.KNIGHT -> R.string.piece_wn; PieceType.PAWN -> R.string.piece_wp
+    }
+    Side.BLACK -> when (piece.type) {
+        PieceType.KING -> R.string.piece_bk; PieceType.QUEEN -> R.string.piece_bq; PieceType.ROOK -> R.string.piece_br
+        PieceType.BISHOP -> R.string.piece_bb; PieceType.KNIGHT -> R.string.piece_bn; PieceType.PAWN -> R.string.piece_bp
     }
 }

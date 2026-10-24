@@ -37,6 +37,15 @@ class BoardReaderTest {
             val labels = if (b.optBoolean("flipped")) reading.labels.reversedArray() else reading.labels
             val position = com.pawneyes.chess.Position(labels.map { com.pawneyes.chess.Piece.fromFen(VisionSpec.CLASSES[it]) })
             assertEquals(name, b.getString("placement"), position.placement())
+            // #21: en cada casilla, primero lo leído y después las demás opciones, ordenadas.
+            for (sq in 0 until 64) {
+                val alt = reading.alternatives[sq]
+                assertEquals(name, reading.labels[sq], alt.first().first)
+                assertTrue(name, alt.size <= BoardReader.MAX_ALTERNATIVES)
+                val others = alt.drop(1).map { it.second }
+                assertEquals(name, others.sortedDescending(), others)
+                assertTrue(name, others.all { it >= BoardReader.MIN_ALTERNATIVE })
+            }
         }
     }
 }

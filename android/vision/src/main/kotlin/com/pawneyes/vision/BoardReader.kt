@@ -26,12 +26,17 @@ object VisionSpec {
     val BLACK = 7..12
 }
 
-/** Lectura del tablero ya decidida: rotación, etiquetas y confianza por casilla. */
+/**
+ * Lectura del tablero ya decidida: rotación, etiquetas y confianza por casilla.
+ * `alternatives[sq]`: las clases más probables de esa casilla (la elegida primero) con su
+ * probabilidad, para corregir las dudosas con un toque (#21).
+ */
 data class BoardReading(
     val rotation: Int,
     val rawLabels: IntArray,
     val labels: IntArray,
     val confidence: FloatArray,
+    val alternatives: List<List<Pair<Int, Float>>> = emptyList(),
 ) {
     val doubtful: Set<Int> get() = confidence.indices.filterTo(mutableSetOf()) { confidence[it] < VisionSpec.DOUBT }
 
@@ -42,6 +47,10 @@ data class BoardReading(
 }
 
 object BoardReader {
+    /** Opciones por casilla (contando la elegida) y probabilidad mínima para ofrecer una. */
+    const val MAX_ALTERNATIVES = 4
+    const val MIN_ALTERNATIVE = 0.02
+
     /**
      * `logits[k]` son las 64×13 salidas del modelo para el tablero girado k×90°
      * en sentido antihorario. Elige la rotación y aplica las reglas de legalidad.
@@ -53,7 +62,12 @@ object BoardReader {
         val raw = IntArray(64) { argmax(probs[it]) }
         val labels = fixPosition(probs)
         val conf = FloatArray(64) { probs[it][labels[it]].toFloat() }
-        return BoardReading(k, raw, labels, conf)
+        val alternatives = List(64) { sq ->
+            val others = probs[sq].indices.filter { it != labels[sq] && probs[sq][it] >= MIN_ALTERNATIVE }
+                .sortedByDescending { probs[sq][it] }.take(MAX_ALTERNATIVES - 1)
+            (listOf(labels[sq]) + others).map { it to probs[sq][it].toFloat() }
+        }
+        return BoardReading(k, raw, labels, conf, alternatives)
     }
 
     /**

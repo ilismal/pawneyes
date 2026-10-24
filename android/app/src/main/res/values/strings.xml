@@ -5,8 +5,8 @@
     <string name="scanning">Leyendo el diagrama…</string>
     <string name="scan_title">Lectura del escáner</string>
     <plurals name="scan_doubtful">
-        <item quantity="one">Hay %d casilla dudosa en rojo. Tócala para darla por buena; vuelve a tocarla para cambiarla.</item>
-        <item quantity="other">Hay %d casillas dudosas en rojo. Tócalas para darlas por buenas; vuelve a tocarlas para cambiarlas.</item>
+        <item quantity="one">Hay %1$d casilla dudosa en rojo. Tócala para ver las otras opciones del escáner o darla por buena.</item>
+        <item quantity="other">Hay %1$d casillas dudosas en rojo. Tócalas para ver las otras opciones del escáner o darlas por buenas.</item>
     </plurals>
     <string name="scan_no_doubts">Sin casillas dudosas. Compara de todos modos la imagen con el tablero.</string>
     <string name="scan_hint">El turno y los enroques no se ven en un diagrama: revísalos abajo.</string>

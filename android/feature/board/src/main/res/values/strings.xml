@@ -37,4 +37,24 @@
     <string name="issue_opponent_in_check">%1$s están en jaque pero no les toca mover</string>
     <string name="issue_castling">Enroque %1$s sin el rey o la torre en su casilla inicial</string>
     <string name="issue_en_passant">La captura al paso en %1$s no es posible</string>
+    <string name="alternatives_title">Casilla %1$s</string>
+    <string name="alternatives_hint">El escáner no estaba seguro. Primero lo que ha leído y después sus otras opciones, de más a menos probable:</string>
+    <string name="alternatives_current">%1$s (la leída, %2$d %%)</string>
+    <string name="alternatives_current_ruled">%1$s (la leída, %2$d %%: las reglas descartaron otra más probable)</string>
+    <string name="alternatives_option">%1$s (%2$d %%)</string>
+    <string name="alternatives_keep">Dejarla como está</string>
+    <string name="alternatives_cancel">Cancelar</string>
+    <string name="piece_empty">Vacía</string>
+    <string name="piece_wk">Rey blanco</string>
+    <string name="piece_wq">Dama blanca</string>
+    <string name="piece_wr">Torre blanca</string>
+    <string name="piece_wb">Alfil blanco</string>
+    <string name="piece_wn">Caballo blanco</string>
+    <string name="piece_wp">Peón blanco</string>
+    <string name="piece_bk">Rey negro</string>
+    <string name="piece_bq">Dama negra</string>
+    <string name="piece_br">Torre negra</string>
+    <string name="piece_bb">Alfil negro</string>
+    <string name="piece_bn">Caballo negro</string>
+    <string name="piece_bp">Peón negro</string>
 </resources>

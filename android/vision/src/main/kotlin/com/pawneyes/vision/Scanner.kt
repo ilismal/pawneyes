@@ -24,7 +24,16 @@ class ScanResult(
     val detection: BoardDetector.Detection,
     /** Orientación y turno según el texto de la página; null si no se ha leído el texto. */
     val context: TextContext? = null,
-)
+) {
+    /**
+     * Opciones del modelo para una casilla de la posición (la elegida primero), con su
+     * probabilidad. `flipped`: si la posición está girada respecto a lo impreso.
+     */
+    fun alternatives(square: Int, flipped: Boolean = context?.flipped == true): List<Pair<Piece?, Float>> {
+        val printed = if (flipped) 63 - square else square
+        return reading.alternatives.getOrNull(printed).orEmpty().map { (c, p) -> Piece.fromFen(VisionSpec.CLASSES[c]) to p }
+    }
+}
 
 /**
  * Pipeline completo, igual que en ml/: foto -> detector -> tablero 512² ->

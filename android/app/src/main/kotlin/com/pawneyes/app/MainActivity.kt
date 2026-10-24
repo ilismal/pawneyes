@@ -322,7 +322,11 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         onImage = { Sharing.shareImage(context, editor.position, editor.flipped, arrows, style = settings.style) },
                     )
                 }
-                BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share) {
+                // Con la tarjeta del escáner a la vista, tocar una casilla dudosa ofrece las opciones del modelo.
+                val done = vm.state as? ScanState.Done
+                val alternatives = done?.let { d -> { sq: Int -> d.result.alternatives(sq, d.flipped) } }
+                BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share,
+                    alternativesFor = alternatives) {
                     ScanPanel(vm.state, editor.marked.size, onDismiss = vm::dismiss,
                         onSaveForTraining = { vm.saveForTraining(editor.position.toFen()) },
                         onSelectBoard = { i ->
