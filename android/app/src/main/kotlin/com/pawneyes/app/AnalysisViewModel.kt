@@ -40,6 +40,8 @@ data class Exercise(
     val played: Move? = null,
     val verdict: Verdict? = null,
     val showSolution: Boolean = false,
+    /** Se ha pedido pista (#20): se marca la pieza que se mueve en la mejor jugada. */
+    val hint: Boolean = false,
 ) {
     val checking: Boolean get() = played != null && verdict == null
 }
@@ -190,6 +192,11 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
 
     fun retryExercise() {
         exercise = exercise?.copy(played = null, verdict = null, showSolution = false)
+    }
+
+    /** La pista se queda aunque se reintente: ya se ha visto. */
+    fun showHint() {
+        exercise = exercise?.takeIf { it.best != null }?.copy(hint = true)
     }
 
     fun showSolution() {

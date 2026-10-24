@@ -58,6 +58,7 @@ fun ExerciseScreen(
     onMove: (Move) -> Unit,
     onRetry: () -> Unit,
     onSolution: () -> Unit,
+    onHint: () -> Unit,
     onExploreSolution: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -85,7 +86,9 @@ fun ExerciseScreen(
                 p.play(played), onMove = {}, modifier = Modifier.fillMaxWidth(), flipped = flipped, enabled = false,
                 highlighted = setOf(played.from, played.to),
             )
-            else -> MoveInputBoard(p, onMove = onMove, modifier = Modifier.fillMaxWidth(), flipped = flipped)
+            // Con pista, la casilla de la pieza que hay que mover queda resaltada.
+            else -> MoveInputBoard(p, onMove = onMove, modifier = Modifier.fillMaxWidth(), flipped = flipped,
+                highlighted = if (exercise.hint && bestMove != null) setOf(bestMove.from) else emptySet())
         }
 
         Card(Modifier.fillMaxWidth()) {
@@ -94,6 +97,7 @@ fun ExerciseScreen(
                     error != null -> Text(stringResource(R.string.analysis_error, error), color = MaterialTheme.colorScheme.error)
                     played == null -> {
                         Text(stringResource(R.string.exercise_prompt), style = MaterialTheme.typography.titleMedium)
+                        if (exercise.hint) Text(stringResource(R.string.exercise_hint_shown), style = MaterialTheme.typography.bodySmall)
                         if (best == null) Busy(stringResource(R.string.exercise_preparing))
                     }
                     exercise.verdict == null -> Busy(stringResource(R.string.exercise_checking, p.toSan(played, LocalPieceLetters.current)))
@@ -101,6 +105,7 @@ fun ExerciseScreen(
                         val v = exercise.verdict
                         Text(stringResource(gradeText(v.grade)), style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold, color = gradeColor(v.grade))
+                        if (exercise.hint) Text(stringResource(R.string.exercise_with_hint), style = MaterialTheme.typography.bodySmall)
                         Text(stringResource(R.string.exercise_you_played, p.toSan(played, LocalPieceLetters.current)))
                         when {
                             v.missedMate -> Text(stringResource(R.string.exercise_missed_mate))
@@ -120,6 +125,9 @@ fun ExerciseScreen(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (played != null && exercise.verdict != null) OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.exercise_retry)) }
             if (!exercise.showSolution) {
+                if (played == null && !exercise.hint) {
+                    OutlinedButton(onClick = onHint, enabled = best != null) { Text(stringResource(R.string.exercise_hint)) }
+                }
                 OutlinedButton(onClick = onSolution, enabled = best != null) { Text(stringResource(R.string.exercise_show_solution)) }
             } else {
                 Button(onClick = onExploreSolution) { Text(stringResource(R.string.exercise_explore)) }

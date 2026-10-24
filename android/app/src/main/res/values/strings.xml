@@ -167,4 +167,7 @@
     <string name="book_illegal">La %1$d.ª jugada escrita («%2$s») no es legal en esa posición.</string>
     <string name="book_ambiguous">La %1$d.ª jugada escrita («%2$s») es ambigua: %3$s.</string>
     <string name="exercise_seen">Ya has visto el análisis de esta posición: cambia algo para resolverla como ejercicio.</string>
+    <string name="exercise_hint">Pista</string>
+    <string name="exercise_hint_shown">Pista: la pieza resaltada es la que hay que mover.</string>
+    <string name="exercise_with_hint">Con pista.</string>
 </resources>

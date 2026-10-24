@@ -279,6 +279,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     onMove = analysisVm::play,
                     onRetry = analysisVm::retryExercise,
                     onSolution = analysisVm::showSolution,
+                    onHint = analysisVm::showHint,
                     onExploreSolution = {
                         ex.best?.let { exploration = Exploration(Line(ex.position, it.pv), 1) }
                         analysisVm.exitExercise()
