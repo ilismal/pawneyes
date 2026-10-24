@@ -125,6 +125,9 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         val vm: ScanViewModel = viewModel()
         val analysisVm: AnalysisViewModel = viewModel()
         val gameVm: GameViewModel = viewModel()
+        LaunchedEffect(settings.analysisLines, settings.analysisDepth) {
+            analysisVm.setLimits(settings.analysisLines, settings.analysisDepth)
+        }
         var playSetup by rememberSaveable { mutableStateOf(false) }
         var history by rememberSaveable { mutableStateOf(false) }
         var settingsOpen by rememberSaveable { mutableStateOf(false) }

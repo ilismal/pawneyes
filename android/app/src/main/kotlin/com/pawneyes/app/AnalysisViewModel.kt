@@ -63,6 +63,8 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
     private val engine = MutableStateFlow<StockfishEngine?>(null)
     private val position = MutableStateFlow<Position?>(null)
     private val active = MutableStateFlow(false)  // interruptor, primer plano y sin escanear
+    /** Líneas y profundidad del análisis, de los ajustes (#24); no afectan al ejercicio. */
+    private val limits = MutableStateFlow(3 to StockfishEngine.DEFAULT_DEPTH)
     private var foreground = true
     private var busy = false
 
@@ -93,14 +95,16 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             // Un margen corto: al editar no se relanza la búsqueda en cada toque.
-            combine(position, active) { p, on -> p.takeIf { on } }
+            combine(position, active, limits) { p, on, l -> p.takeIf { on }?.let { it to l } }
                 .debounce(250)
-                .collectLatest { p ->
+                .collectLatest { req ->
+                    val p = req?.first
+                    val (lines, depth) = req?.second ?: limits.value
                     try {
                         // Sin jugadas legales (mate o ahogado) no hay nada que analizar:
                         // el panel muestra el resultado sin el motor.
                         if (p == null || !p.isLegal() || p.legalMoves().isEmpty()) engine.value?.stop()
-                        else ensureEngine().analyze(p)
+                        else ensureEngine().analyze(p, lines = lines, depth = depth)
                     } catch (e: Exception) {
                         Log.e("Pawneyes", "error del motor", e)
                         error = e.message ?: e.javaClass.simpleName
@@ -111,6 +115,10 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun ensureEngine(): StockfishEngine =
         engine.value ?: EngineHolder.get(getApplication()).also { engine.value = it }
+
+    fun setLimits(lines: Int, depth: Int) {
+        limits.value = lines to depth
+    }
 
     fun toggle(on: Boolean) {
         enabled = on
@@ -145,7 +153,8 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
         exerciseJob = viewModelScope.launch {
             try {
                 val e = ensureEngine()
-                e.analyze(p)
+                // El ejercicio solo mira la mejor jugada: una línea basta y llega antes.
+                e.analyze(p, lines = 1, depth = StockfishEngine.DEFAULT_DEPTH)
                 val a = e.analysis.filterNotNull().first {
                     it.position == p && it.only.isEmpty() && it.lines.isNotEmpty() && (it.done || it.depth >= EXERCISE_DEPTH)
                 }
@@ -173,7 +182,7 @@ class AnalysisViewModel(app: Application) : AndroidViewModel(app) {
                 } else {
                     // La jugada del usuario, evaluada a la misma profundidad que la mejor.
                     val e = ensureEngine()
-                    e.analyze(ex.position, only = listOf(move))
+                    e.analyze(ex.position, only = listOf(move), lines = 1, depth = StockfishEngine.DEFAULT_DEPTH)
                     val a = e.analysis.filterNotNull().first {
                         it.position == ex.position && it.only == listOf(move) && it.lines.isNotEmpty() &&
                             (it.done || it.depth >= best.depth)

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.pawneyes.board.BoardStyle
@@ -17,7 +18,15 @@ import kotlinx.coroutines.flow.map
 data class AppSettings(
     val style: BoardStyle = BoardStyle(),
     val letters: PieceLetters = PieceLetters.SPANISH,
-)
+    /** Análisis (#24): líneas que se muestran y profundidad máxima de la búsqueda. */
+    val analysisLines: Int = 3,
+    val analysisDepth: Int = 40,
+) {
+    companion object {
+        val LINES = 1..5
+        val DEPTHS = listOf(20, 30, 40)
+    }
+}
 
 private val Context.dataStore by preferencesDataStore(name = "ajustes")
 
@@ -28,6 +37,8 @@ class SettingsStore(private val context: Context) {
         val PIECES = stringPreferencesKey("piezas")
         val COORDINATES = booleanPreferencesKey("coordenadas")
         val LETTERS = stringPreferencesKey("notacion")
+        val LINES = intPreferencesKey("lineas")
+        val DEPTH = intPreferencesKey("profundidad")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { it.toSettings() }
@@ -39,6 +50,8 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.PIECES] = new.style.pieces.name
             prefs[Keys.COORDINATES] = new.style.coordinates
             prefs[Keys.LETTERS] = new.letters.name
+            prefs[Keys.LINES] = new.analysisLines
+            prefs[Keys.DEPTH] = new.analysisDepth
         }
     }
 
@@ -52,6 +65,8 @@ class SettingsStore(private val context: Context) {
                 coordinates = this[Keys.COORDINATES] ?: default.style.coordinates,
             ),
             letters = enumOr(this[Keys.LETTERS], default.letters),
+            analysisLines = this[Keys.LINES]?.takeIf { it in AppSettings.LINES } ?: default.analysisLines,
+            analysisDepth = this[Keys.DEPTH]?.takeIf { it in AppSettings.DEPTHS } ?: default.analysisDepth,
         )
     }
 

@@ -127,6 +127,28 @@ fun SettingsScreen(
             Text(stringResource(R.string.settings_notation_hint), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Section(stringResource(R.string.settings_analysis)) {
+            Text(stringResource(R.string.settings_analysis_lines), style = MaterialTheme.typography.bodySmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (n in AppSettings.LINES) {
+                    FilterChip(settings.analysisLines == n, { onChange { it.copy(analysisLines = n) } }, { Text("$n") })
+                }
+            }
+            Text(stringResource(R.string.settings_analysis_depth), style = MaterialTheme.typography.bodySmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (d in AppSettings.DEPTHS) {
+                    FilterChip(settings.analysisDepth == d, { onChange { it.copy(analysisDepth = d) } }, {
+                        Text(stringResource(when (d) {
+                            20 -> R.string.settings_depth_quick
+                            30 -> R.string.settings_depth_normal
+                            else -> R.string.settings_depth_deep
+                        }, d))
+                    })
+                }
+            }
+            Text(stringResource(R.string.settings_analysis_hint), style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_coordinates), style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f))

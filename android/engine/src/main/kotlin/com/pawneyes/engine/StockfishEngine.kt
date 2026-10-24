@@ -50,6 +50,8 @@ class StockfishEngine private constructor(
 
     /** Líneas de análisis configuradas (se restauran al volver de jugar). */
     private var lines = 3
+    /** MultiPV que tiene ahora el motor: solo se le vuelve a mandar si cambia. */
+    private var multiPv = 3
 
     /** true tras pedir una jugada para jugar: hay que restaurar la configuración de análisis. */
     private var playMode = false
@@ -131,6 +133,7 @@ class StockfishEngine private constructor(
         send("setoption name Hash value $hashMb")
         send("setoption name MultiPV value $lines")
         this@StockfishEngine.lines = lines
+        multiPv = lines
         send("isready")
         await("readyok")
     }
@@ -149,22 +152,30 @@ class StockfishEngine private constructor(
      * un final sencillo), UCI obliga al motor a esperar un `stop` y Stockfish lo
      * hace en un bucle activo, con un núcleo al 100 % sin hacer nada útil.
      */
-    suspend fun analyze(position: Position, only: List<Move> = emptyList()) = withContext(Dispatchers.IO) {
+    suspend fun analyze(
+        position: Position,
+        only: List<Move> = emptyList(),
+        lines: Int = this.lines,
+        depth: Int = maxDepth,
+    ) = withContext(Dispatchers.IO) {
         mutex.withLock {
             stopSearch()
             bestmoves.tryReceive()  // descarta un bestmove viejo, si quedó alguno
             if (playMode) {
-                // Vuelta al análisis tras jugar: todas las líneas y a plena fuerza.
+                // Vuelta al análisis tras jugar: a plena fuerza.
                 send("setoption name UCI_LimitStrength value false")
-                send("setoption name MultiPV value $lines")
                 playMode = false
+            }
+            if (lines != multiPv) {
+                send("setoption name MultiPV value $lines")
+                multiPv = lines
             }
             _analysis.value = Analysis(position, emptyList(), only = only)
             currentOnly = only
             current = position
             send("position fen ${position.toFen()}")
             val restrict = if (only.isEmpty()) "" else " searchmoves " + only.joinToString(" ") { it.uci }
-            send("go depth $maxDepth$restrict")
+            send("go depth $depth$restrict")
         }
     }
 
@@ -180,6 +191,7 @@ class StockfishEngine private constructor(
             stopSearch()
             bestmoves.tryReceive()
             send("setoption name MultiPV value 1")
+            multiPv = 1
             if (elo != null) {
                 send("setoption name UCI_LimitStrength value true")
                 send("setoption name UCI_Elo value ${elo.coerceIn(MIN_ELO, MAX_ELO)}")

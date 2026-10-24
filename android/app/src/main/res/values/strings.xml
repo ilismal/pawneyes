@@ -170,4 +170,11 @@
     <string name="exercise_hint">Pista</string>
     <string name="exercise_hint_shown">Pista: la pieza resaltada es la que hay que mover.</string>
     <string name="exercise_with_hint">Con pista.</string>
+    <string name="settings_analysis">Análisis</string>
+    <string name="settings_analysis_lines">Líneas que se muestran</string>
+    <string name="settings_analysis_depth">Profundidad máxima</string>
+    <string name="settings_depth_quick">Rápida (%1$d)</string>
+    <string name="settings_depth_normal">Normal (%1$d)</string>
+    <string name="settings_depth_deep">Máxima (%1$d)</string>
+    <string name="settings_analysis_hint">Con menos líneas Stockfish llega antes más hondo, y con menos profundidad termina antes y gasta menos batería. No afecta al ejercicio ni a las partidas.</string>
 </resources>
