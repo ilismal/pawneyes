@@ -61,6 +61,8 @@ fun ChessBoard(
     highlighted: Set<Int> = emptySet(),
     dots: Set<Int> = emptySet(),
     onSquareClick: ((Int) -> Unit)? = null,
+    /** Pulsación larga en una casilla (#27); null si no hace nada. */
+    onSquareLongClick: ((Int) -> Unit)? = null,
     /** Arrastrar (#25): ¿se puede arrastrar la pieza de esta casilla? */
     onDragStart: ((Int) -> Boolean)? = null,
     /** Se suelta la pieza arrastrada desde `from` en `to` (null: fuera del tablero). */
@@ -71,21 +73,29 @@ fun ChessBoard(
     val lightSquare = style.theme.light
     val darkSquare = style.theme.dark
     val textMeasurer = rememberTextMeasurer()
-    val tap = if (onSquareClick == null) Modifier else Modifier.pointerInput(flipped, onSquareClick) {
-        detectTapGestures { offset ->
+    // Los callbacks se leen al vuelo: si fueran clave de pointerInput, cada recomposición
+    // (la selección cambia al empezar a arrastrar) reiniciaría el gesto y lo cancelaría.
+    val click by rememberUpdatedState(onSquareClick)
+    val longClick by rememberUpdatedState(onSquareLongClick)
+    val clickable = onSquareClick != null
+    val longClickable = onSquareLongClick != null
+    val tap = if (!clickable && !longClickable) Modifier else Modifier.pointerInput(flipped, clickable, longClickable) {
+        fun squareOf(offset: Offset): Int {
             val cell = size.width / 8f
             val col = (offset.x / cell).toInt().coerceIn(0, 7)
             val row = (offset.y / cell).toInt().coerceIn(0, 7)
-            onSquareClick(squareAt(row, col, flipped))
+            return squareAt(row, col, flipped)
         }
+        detectTapGestures(
+            onLongPress = if (longClickable) { o -> longClick?.invoke(squareOf(o)) } else null,
+            onTap = if (clickable) { o -> click?.invoke(squareOf(o)) } else null,
+        )
     }
     // Arrastre: la pieza sigue al dedo y se suelta en la casilla de debajo. Empieza al pasar
     // el umbral de movimiento, así que un toque normal sigue siendo un toque.
     var dragFrom by remember { mutableStateOf<Int?>(null) }
     var dragAt by remember { mutableStateOf(Offset.Zero) }
     val current by rememberUpdatedState(position)
-    // Los callbacks se leen al vuelo: si fueran clave de pointerInput, cada recomposición
-    // (la selección cambia al empezar a arrastrar) reiniciaría el gesto y lo cancelaría.
     val canDrag by rememberUpdatedState(onDragStart)
     val drop by rememberUpdatedState(onDrop)
     val draggable = onDragStart != null && onDrop != null

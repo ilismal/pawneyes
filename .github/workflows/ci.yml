@@ -33,7 +33,7 @@ jobs:
         working-directory: android
         run: >
           ./gradlew :core:chess:test :vision:testDebugUnitTest :engine:testDebugUnitTest
-          :feature:camera:testDebugUnitTest :maia:testDebugUnitTest :app:testDebugUnitTest
+          :feature:camera:testDebugUnitTest :feature:board:testDebugUnitTest :maia:testDebugUnitTest :app:testDebugUnitTest
           lintDebug :app:assembleDebug
       - name: Librerías nativas alineadas a 16 KB
         run: python3 android/scripts/check_16kb.py android/app/build/outputs/apk/debug/app-debug.apk

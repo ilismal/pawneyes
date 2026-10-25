@@ -53,13 +53,15 @@
 - **Escanea un diagrama** desde la cámara (con autocaptura cuando el tablero se queda quieto,
   zoom y linterna), desde la galería o compartiendo una foto con la app. Detecta el tablero
   aunque la foto esté girada o en perspectiva, y marca en rojo las casillas de las que no está
-  seguro: al tocarlas, ofrece sus otras opciones para corregirlas con un toque. Si en la página
+  seguro: al tocarlas, ofrece sus otras opciones para corregirlas con un toque (o «Otra…», si
+  no acierta ninguna, para elegir cualquier pieza). Si en la página
   hay varios diagramas, se elige cuál cargar.
 - **Lee el texto de la página** (con Tesseract, en el móvil): el turno, si el pie lo dice
   («Juegan las negras», «White to move») o se deduce de la jugada impresa junto al diagrama
   («5.Cf3», «19. ..., T1A»), y si el diagrama está impreso desde el lado de las negras (por
   las coordenadas o, si no las hay, por los peones). Si se equivoca, se corrige con un toque.
-- **Editor de posiciones**: colocar, mover (arrastrando) y quitar piezas, turno, enroques, FEN,
+- **Editor de posiciones**: colocar piezas, moverlas (con dos toques o arrastrando), cambiar o
+  quitar la de una casilla con una pulsación larga, turno, enroques, FEN,
   deshacer, avisos de posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al
   bando que no mueve…).
 - **Análisis con Stockfish 16** dentro de la app: evaluación, las tres mejores líneas en notación

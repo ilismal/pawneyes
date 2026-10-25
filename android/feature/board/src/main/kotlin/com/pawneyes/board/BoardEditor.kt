@@ -42,6 +42,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
@@ -87,12 +89,14 @@ class BoardEditorState(initial: Position, flipped: Boolean = false, marked: Set<
     /** Vuelve al estado anterior a la última modificación. */
     fun undo() {
         val (p, m) = history.removeLastOrNull() ?: return
+        selected = null
         position = p
         marked = m
     }
 
     /** Todo cambio pasa por aquí: guarda el estado actual antes de aplicarlo. */
     private fun change(p: Position, m: Set<Int> = marked) {
+        selected = null
         if (p == position && m == marked) return
         history += position to marked
         if (history.size > MAX_UNDO) history.removeAt(0)
@@ -100,12 +104,29 @@ class BoardEditorState(initial: Position, flipped: Boolean = false, marked: Set<
         marked = m
     }
 
-    /** Corrige una casilla dudosa con una de las opciones del escáner y la da por revisada. */
-    fun resolve(square: Int, piece: Piece?) = change(position.with(square, piece), marked - square)
+    /** Pieza elegida con un toque para moverla con el siguiente (#27); no entra en «Deshacer». */
+    var selected by mutableStateOf<Int?>(null)
+        private set
+
+    fun deselect() {
+        selected = null
+    }
 
     /**
-     * Mueve una pieza de `from` a `to` arrastrándola (#25); fuera del tablero (`to` null),
-     * la quita. Las dos casillas dejan de estar marcadas como dudosas.
+     * Pone `piece` (o nada) en la casilla y la da por revisada: las opciones del escáner (#21),
+     * «Otra…» (#26) o la pulsación larga (#27). Solo quedan los enroques que la colocación permite.
+     */
+    fun set(square: Int, piece: Piece?) {
+        val p = position.with(square, piece)
+        change(p.copy(castling = p.castling intersect p.plausibleCastling(), enPassant = null), marked - square)
+    }
+
+    /** Corrige una casilla dudosa con una de las opciones del escáner y la da por revisada. */
+    fun resolve(square: Int, piece: Piece?) = set(square, piece)
+
+    /**
+     * Mueve una pieza de `from` a `to`, por arrastre (#25) o con dos toques (#27); fuera del
+     * tablero (`to` null), la quita. Las dos casillas dejan de estar marcadas como dudosas.
      */
     fun move(from: Int, to: Int?) {
         if (to == from) return
@@ -119,21 +140,26 @@ class BoardEditorState(initial: Position, flipped: Boolean = false, marked: Set<
     /** Da por revisada una casilla dudosa sin cambiarla. */
     fun accept(square: Int) = change(position, marked - square)
 
-    /** Coloca la pieza elegida; tocar una casilla con esa misma pieza la quita. */
+    /**
+     * Un toque (#27): con una pieza elegida, la mueve a esa casilla (o la suelta si es la misma);
+     * si no, una pieza se elige para moverla y una casilla vacía recibe la pieza de la paleta.
+     * Con la goma, el toque borra. Cambiar una pieza por otra es la pulsación larga.
+     */
     fun tap(square: Int) {
-        if (square in marked) {
-            // Primer toque en una casilla dudosa: se da por revisada, sin cambiarla.
-            change(position, marked - square)
+        selected?.let { from ->
+            selected = null
+            move(from, square)
             return
         }
-        val current = position[square]
-        val next = when (val t = tool) {
-            is EditTool.Place -> if (current == t.piece) null else t.piece
-            EditTool.Erase -> null
+        if (square in marked) {
+            // Primer toque en una casilla dudosa: se da por revisada, sin cambiarla.
+            accept(square)
+            return
         }
-        // Tras mover piezas, solo quedan los enroques que la colocación permite.
-        val p = position.with(square, next)
-        change(p.copy(castling = p.castling intersect p.plausibleCastling(), enPassant = null))
+        when (val t = tool) {
+            EditTool.Erase -> if (position[square] != null) set(square, null)
+            is EditTool.Place -> if (position[square] != null) selected = square else set(square, t.piece)
+        }
     }
 
     fun setSideToMove(side: Side) = change(position.copy(sideToMove = side, enPassant = null))
@@ -178,23 +204,32 @@ fun BoardEditor(
     header: @Composable () -> Unit = {},
 ) {
     var choosing by remember { mutableStateOf<Int?>(null) }
+    var editing by remember { mutableStateOf<Int?>(null) }  // elegir cualquier pieza (#26, #27)
     val onSquare: (Int) -> Unit = { sq ->
         val options = alternativesFor?.invoke(sq).orEmpty()
-        if (sq in state.marked && options.size > 1) choosing = sq else state.tap(sq)
+        if (state.selected == null && sq in state.marked && options.size > 1) choosing = sq else state.tap(sq)
     }
     choosing?.let { sq ->
         AlternativesDialog(sq, alternativesFor!!(sq),
             onPick = { piece -> state.resolve(sq, piece); choosing = null },
             onKeep = { state.accept(sq); choosing = null },
+            onOther = { choosing = null; editing = sq },
             onDismiss = { choosing = null })
+    }
+    editing?.let { sq ->
+        PieceChooserDialog(sq, state.position[sq],
+            onPick = { piece -> state.set(sq, piece); editing = null },
+            onDismiss = { editing = null })
     }
     Column(
         modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         header()
-        ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows, onSquareClick = onSquare,
-            onDragStart = { true }, onDrop = state::move)
+        ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows,
+            highlighted = setOfNotNull(state.selected), onSquareClick = onSquare,
+            onSquareLongClick = { sq -> state.deselect(); editing = sq },
+            onDragStart = { state.deselect(); true }, onDrop = state::move)
         belowBoard()
         SideToMove(state)  // justo bajo el tablero: es lo primero que hay que decidir tras escanear
         PiecePalette(state)
@@ -233,8 +268,7 @@ private fun PiecePalette(state: BoardEditorState) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for (side in Side.entries) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (type in listOf(PieceType.KING, PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP,
-                    PieceType.KNIGHT, PieceType.PAWN)) {
+                for (type in PALETTE) {
                     val piece = Piece(side, type)
                     Box(Modifier.weight(1f)) {
                         Cell(state.tool == EditTool.Place(piece), { state.tool = EditTool.Place(piece) }) {
@@ -251,9 +285,8 @@ private fun PiecePalette(state: BoardEditorState) {
                 }
             }
         }
-        if (state.tool == EditTool.Erase) {
-            Text(stringResource(R.string.eraser), style = MaterialTheme.typography.bodySmall)
-        }
+        Text(stringResource(if (state.tool == EditTool.Erase) R.string.eraser else R.string.editor_hint),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -381,6 +414,7 @@ private fun AlternativesDialog(
     options: List<Pair<Piece?, Float>>,
     onPick: (Piece?) -> Unit,
     onKeep: () -> Unit,
+    onOther: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val style = LocalBoardStyle.current
@@ -414,12 +448,62 @@ private fun AlternativesDialog(
                         )
                     }
                 }
+                // Si no acierta ninguna (#26): cualquier pieza, a mano.
+                Row(
+                    Modifier.fillMaxWidth().clickable(onClick = onOther).padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                        Text("…", style = MaterialTheme.typography.titleLarge)
+                    }
+                    Text(stringResource(R.string.alternatives_other), style = MaterialTheme.typography.bodyMedium)
+                }
             }
         },
         confirmButton = { TextButton(onClick = onKeep) { Text(stringResource(R.string.alternatives_keep)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.alternatives_cancel)) } },
     )
 }
+
+/** Cualquier pieza de los dos colores, o vacía, para una casilla; la actual va marcada. */
+@Composable
+private fun PieceChooserDialog(square: Int, current: Piece?, onPick: (Piece?) -> Unit, onDismiss: () -> Unit) {
+    val style = LocalBoardStyle.current
+    @Composable
+    fun Option(piece: Piece?, modifier: Modifier) {
+        val border = if (piece == current) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+        else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        Box(
+            modifier.aspectRatio(1f).border(border, RoundedCornerShape(6.dp)).clip(RoundedCornerShape(6.dp))
+                .background(style.theme.light).clickable { onPick(piece) }.padding(4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (piece != null) Image(painterResource(style.pieces.drawable(piece)), stringResource(pieceName(piece)))
+            else Text("✕", style = MaterialTheme.typography.titleLarge, color = Color.Black)
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.alternatives_title, Square.name(square))) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (side in Side.entries) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (type in PALETTE) Option(Piece(side, type), Modifier.weight(1f))
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Option(null, Modifier.weight(1f))
+                    Text(stringResource(R.string.piece_empty), Modifier.weight(5f), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.alternatives_cancel)) } },
+    )
+}
+
+private val PALETTE = listOf(PieceType.KING, PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT, PieceType.PAWN)
 
 private fun pieceName(piece: Piece?): Int = when (piece?.side) {
     null -> R.string.piece_empty
