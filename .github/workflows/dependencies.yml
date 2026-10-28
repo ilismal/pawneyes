@@ -1,0 +1,31 @@
+# Envía a GitHub el grafo de dependencias de Gradle (las que van en la APK), para que
+# Dependabot avise también de sus vulnerabilidades; sin esto solo ve las de ml/ (uv.lock)
+# y las acciones. Solo resuelve dependencias: no compila nada.
+name: Dependencias
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dependencies
+  cancel-in-progress: true
+
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Licencias del SDK de Android
+        run: yes | "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)" --licenses > /dev/null || true
+      - uses: gradle/actions/dependency-submission@v6
+        with:
+          build-root-directory: android
