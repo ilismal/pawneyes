@@ -32,6 +32,7 @@ val minimumVersions = mapOf(
     "org.bitbucket.b_c:jose4j" to "0.9.6",
     "org.jdom:jdom2" to "2.0.6.1",
     "org.apache.commons:commons-lang3" to "3.18.0",
+    "org.apache.httpcomponents:httpclient" to "4.5.13",  // ya resolvía 4.5.14; lo pedido era 4.5.6
 )
 
 fun versionParts(v: String) = v.substringBefore('-').split('.').map { it.toIntOrNull() ?: 0 }
