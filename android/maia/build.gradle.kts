@@ -66,7 +66,11 @@ kotlin {
 
 dependencies {
     api(project(":core:chess"))
-    implementation(libs.litert)
+    implementation(libs.litert) {
+        // Descarga de modelos desde Google Play (con WorkManager, Room y Play Services): no la
+        // usamos, los modelos van en los assets, y añadía permisos y componentes exportados (#30).
+        exclude(group = "com.google.android.play", module = "ai-delivery")
+    }
     testImplementation(libs.junit)
     testImplementation(libs.json)
     androidTestImplementation(libs.junit)

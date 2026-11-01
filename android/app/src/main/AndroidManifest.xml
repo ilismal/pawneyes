@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <!--
+      Permisos que añaden las librerías y la app no usa (#30): LiteRT declara los de servicio
+      en primer plano para descargar modelos desde Google Play (aquí van en los assets), y
+      media3, que llega con CameraX para grabar vídeo, el del estado de la red.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
     <!-- La cámara es opcional: sin ella se puede escanear desde la galería. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
