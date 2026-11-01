@@ -84,7 +84,7 @@
 - **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
 
 Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La APK ocupa unos
-72 MB, más de la mitad por la red neuronal de Stockfish.
+65 MB, más de la mitad por la red neuronal de Stockfish.
 
 ## Instalación
 
