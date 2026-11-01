@@ -45,14 +45,19 @@ class ScanBenchmarkTest {
                     val t1 = SystemClock.elapsedRealtimeNanos()
                     val color = BoardDetector.warp(photo, detection.quad)
                     val board = Mat().also { Imgproc.cvtColor(color, it, Imgproc.COLOR_RGBA2GRAY) }
-                    val logits = (0 until 4).map { k -> classifier.logits(SquareCropper.crop(SquareCropper.rotate(board, k))) }
+                    val squares = SquareCropper.crop(board)
+                    // Las 2 o 3 pasadas del modelo dentro de BoardReader.read (#13), aparte del resto.
+                    var modelNs = 0L
                     val t2 = SystemClock.elapsedRealtimeNanos()
-                    BoardReader.read(logits)
+                    BoardReader.read(squares) { bytes ->
+                        val s = SystemClock.elapsedRealtimeNanos()
+                        classifier.logits(bytes).also { modelNs += SystemClock.elapsedRealtimeNanos() - s }
+                    }
                     val t3 = SystemClock.elapsedRealtimeNanos()
                     if (round > 0) {  // la primera vuelta solo calienta
                         detect += (t1 - t0) / 1_000_000
-                        model += (t2 - t1) / 1_000_000
-                        rules += (t3 - t2) / 1_000_000
+                        model += (t2 - t1 + modelNs) / 1_000_000
+                        rules += (t3 - t2 - modelNs) / 1_000_000
                     }
                 }
             }
@@ -60,7 +65,7 @@ class ScanBenchmarkTest {
         fun stats(v: List<Long>) = v.sorted().let { "mediana ${it[it.size / 2]} ms, máx ${it.last()} ms" }
         Log.i(TAG, "dispositivo ${android.os.Build.MODEL}, ${Runtime.getRuntime().availableProcessors()} núcleos")
         Log.i(TAG, "detector: ${stats(detect)}")
-        Log.i(TAG, "modelo (4 rotaciones): ${stats(model)}")
+        Log.i(TAG, "enderezado, recorte y modelo (2-3 pasadas): ${stats(model)}")
         Log.i(TAG, "rotación + reglas: ${stats(rules)}")
         Log.i(TAG, "total: ${stats(detect.indices.map { detect[it] + model[it] + rules[it] })}")
     }

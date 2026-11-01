@@ -5,6 +5,11 @@
 Escribe models/square_net.tflite. Entrada: float32 (64, 1, 64, 64) en 0..255,
 las 64 casillas de un tablero en el orden de common.squares; la
 estandarización por casilla va dentro del modelo. Salida: logits (64, 13).
+
+Los pesos van cuantizados a int8 (#13; las activaciones siguen en float, así que
+la entrada y la salida no cambian): 3,7 veces más pequeño y unas 3 veces más
+rápido, con la misma lectura en ejemplos/. La cuantización completa (también las
+activaciones, calibradas) no era más rápida y cambiaba más las probabilidades.
 """
 
 import sys
@@ -16,6 +21,7 @@ import torch
 
 import litert_torch
 from ai_edge_litert.interpreter import Interpreter
+from ai_edge_quantizer import quantizer, recipe
 
 from common.legality import fix_position
 from common.squares import crop_squares
@@ -36,21 +42,35 @@ class TFLiteModel:
         self.out = self.interp.get_output_details()[0]
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        self.interp.set_tensor(self.inp["index"], x.cpu().numpy().astype(np.float32))
+        x = x.cpu().numpy().astype(np.float32)
+        scale, zero = self.inp["quantization"]
+        if self.inp["dtype"] != np.float32:  # modelo cuantizado también en la entrada
+            info = np.iinfo(self.inp["dtype"])
+            x = np.clip(np.round(x / scale + zero), info.min, info.max).astype(self.inp["dtype"])
+        self.interp.set_tensor(self.inp["index"], x)
         self.interp.invoke()
-        return torch.from_numpy(self.interp.get_tensor(self.out["index"]).copy())
+        y = self.interp.get_tensor(self.out["index"]).copy()
+        scale, zero = self.out["quantization"]
+        if self.out["dtype"] != np.float32:
+            y = (y.astype(np.float32) - zero) * scale
+        return torch.from_numpy(y)
 
 
 def main() -> None:
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else MODELS / "square_net.pt"
     dst = src.with_suffix(".tflite")
+    f32 = src.with_name(src.stem + "_f32.tflite")
     ckpt = torch.load(src, map_location="cpu")
     model = SquareNet(ckpt["width"]).eval()
     model.load_state_dict(ckpt["state"])
 
     sample = torch.zeros(BATCH, 1, 64, 64)
-    litert_torch.convert(model, (sample,)).export(str(dst))
-    print(f"exportado {dst.name}: {dst.stat().st_size / 1024:.0f} KB")
+    litert_torch.convert(model, (sample,)).export(str(f32))
+    qt = quantizer.Quantizer(str(f32))
+    qt.load_quantization_recipe(recipe.dynamic_wi8_afp32())
+    qt.quantize().export_model(str(dst), overwrite=True)
+    print(f"exportado {dst.name}: {f32.stat().st_size / 1024:.0f} KB en float32, "
+          f"{dst.stat().st_size / 1024:.0f} KB con los pesos en int8")
 
     tfl = TFLiteModel(dst)
     print(f"entrada {tfl.inp['shape'].tolist()} {tfl.inp['dtype'].__name__}, "
@@ -81,14 +101,14 @@ def main() -> None:
     print(f"TFLite en ejemplos/: casillas {correct}/{64 * len(boards)} = "
           f"{correct / (64 * len(boards)):.4f}   tableros perfectos {perfect}/{len(boards)}")
 
-    # 3. Tiempo por tablero en este Mac (CPU), como referencia.
+    # 3. Tiempo por lote de 64 casillas en este Mac (CPU), como referencia.
     x = torch.from_numpy(crop_squares(boards[0][1])[:, None])
-    tfl(x)
-    t0 = time.perf_counter()
-    for _ in range(50):
-        tfl(x)
-    print(f"tiempo por tablero (64 casillas, CPU del Mac): "
-          f"{(time.perf_counter() - t0) / 50 * 1000:.1f} ms")
+    for name, m in (("float32", TFLiteModel(f32)), ("int8", tfl)):
+        m(x)
+        t0 = time.perf_counter()
+        for _ in range(50):
+            m(x)
+        print(f"tiempo por lote ({name}, CPU del Mac): {(time.perf_counter() - t0) / 50 * 1000:.1f} ms")
 
 
 if __name__ == "__main__":

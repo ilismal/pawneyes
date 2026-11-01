@@ -51,14 +51,40 @@ object BoardReader {
     const val MAX_ALTERNATIVES = 4
     const val MIN_ALTERNATIVE = 0.02
 
+    /** Casillas con las que se prueba cada giro: 3 × 21 = 63 caben en un lote del modelo. */
+    const val ROTATION_SQUARES = 21
+
     /**
-     * `logits[k]` son las 64×13 salidas del modelo para el tablero girado k×90°
-     * en sentido antihorario. Elige la rotación y aplica las reglas de legalidad.
+     * Port de predict_board (ml/train/data.py), #13. `squares`: las 64 casillas sin girar
+     * ([SquareCropper.crop]); `classify` da los logits de n casillas seguidas.
+     *
+     * Primero las 64 tal cual. Para los otros tres giros basta con las casillas ocupadas,
+     * que son las que cambian al girar (una vacía es igual en cualquier giro): las
+     * [ROTATION_SQUARES] más claramente ocupadas, giradas, en un solo lote. Gana el giro con
+     * más confianza media en sus piezas; si no es el 0, se clasifica entero.
      */
-    fun read(logits: List<Array<FloatArray>>): BoardReading {
-        require(logits.size == 4)
-        val k = chooseRotation(logits)
-        val probs = logits[k].map { softmax(it) }.toTypedArray()
+    fun read(squares: ByteArray, classify: (ByteArray) -> Array<FloatArray>): BoardReading {
+        val upright = classify(squares)
+        val logp = upright.map { logSoftmax(it) }
+        val occupied = (0 until 64).filter { argmax(logp[it]) != VisionSpec.EMPTY }
+        if (occupied.isEmpty()) return read(upright, 0)
+        val probe = occupied.sortedBy { logp[it][VisionSpec.EMPTY] }.take(ROTATION_SQUARES)
+        val turned = classify(SquareRotation.select(squares, probe, ks = listOf(1, 2, 3)))
+        val scores = listOf(rotationScore(probe.map { logp[it] })) +
+            (0 until 3).map { r -> rotationScore(probe.indices.map { logSoftmax(turned[r * probe.size + it]) }) }
+        val k = scores.indices.maxBy { scores[it] }  // ante un empate, el primero, como np.argmax
+        return read(if (k == 0) upright else classify(SquareRotation.rotateSquares(squares, k)), k)
+    }
+
+    /** Confianza media en las casillas que el modelo ve ocupadas. */
+    private fun rotationScore(logp: List<DoubleArray>): Double {
+        val pieces = logp.filter { argmax(it) != VisionSpec.EMPTY }
+        return if (pieces.isEmpty()) Double.NEGATIVE_INFINITY else pieces.sumOf { it.max() } / pieces.size
+    }
+
+    /** Lectura con el giro ya elegido: `logits` son las 64×13 salidas para el tablero girado k×90°. */
+    fun read(logits: Array<FloatArray>, k: Int): BoardReading {
+        val probs = logits.map { softmax(it) }.toTypedArray()
         val raw = IntArray(64) { argmax(probs[it]) }
         val labels = fixPosition(probs)
         val conf = FloatArray(64) { probs[it][labels[it]].toFloat() }
@@ -68,33 +94,6 @@ object BoardReader {
             (listOf(labels[sq]) + others).map { it to probs[sq][it].toFloat() }
         }
         return BoardReading(k, raw, labels, conf, alternatives)
-    }
-
-    /**
-     * La rotación con más confianza media en las casillas que ve ocupadas: una
-     * casilla vacía es igual en cualquier giro y, con pocas piezas, ahogaría la señal.
-     */
-    fun chooseRotation(logits: List<Array<FloatArray>>): Int {
-        var best = -1
-        var bestConf = Double.NEGATIVE_INFINITY
-        logits.forEachIndexed { k, board ->
-            var sum = 0.0
-            var n = 0
-            for (sq in board) {
-                val logp = logSoftmax(sq)
-                val top = argmax(logp)
-                if (top != VisionSpec.EMPTY) {
-                    sum += logp[top]
-                    n++
-                }
-            }
-            val conf = if (n > 0) sum / n else Double.NEGATIVE_INFINITY
-            if (best < 0 || conf > bestConf) {
-                best = k
-                bestConf = conf
-            }
-        }
-        return best
     }
 
     /**

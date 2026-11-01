@@ -109,11 +109,7 @@ class Scanner(private val classifier: SquareClassifier, private val text: TextRe
         val color = BoardDetector.warp(photo, detection.quad)
         val board = Mat()
         Imgproc.cvtColor(color, board, Imgproc.COLOR_RGBA2GRAY)
-        val logits = (0 until 4).map { k ->
-            val rotated = SquareCropper.rotate(board, k)
-            classifier.logits(SquareCropper.crop(rotated)).also { rotated.release() }
-        }
-        val reading = BoardReader.read(logits)
+        val reading = BoardReader.read(SquareCropper.crop(board), classifier::logits)
         val upright = SquareCropper.rotate(board, reading.rotation)
         val bitmap = Bitmap.createBitmap(upright.cols(), upright.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(upright, bitmap)

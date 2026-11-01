@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import IterableDataset, get_worker_info
 
-from common.squares import crop_squares, placement_to_labels
+from common.squares import crop_squares, placement_to_labels, rotate_squares
 from detect.board import find_board_quad, warp_board
 from synth.render import detector_error, sample
 
@@ -99,22 +99,48 @@ def real_boards() -> list[tuple[str, np.ndarray, np.ndarray]]:
             for name, gray, quad, labels in labelled_photos(EXAMPLES)]
 
 
+ROTATION_SQUARES = 21  # casillas con las que se prueba cada giro: 3 × 21 = 63 caben en un lote
+
+
+def run_squares(model, squares: np.ndarray, device) -> np.ndarray:
+    """log-probabilidades de cualquier número de casillas, en lotes de 64 (el tamaño fijo del
+    modelo exportado); el último se rellena repitiendo la primera casilla."""
+    out = []
+    for i in range(0, len(squares), 64):
+        chunk = squares[i:i + 64]
+        batch = np.concatenate([chunk, np.repeat(chunk[:1], 64 - len(chunk), axis=0)])
+        x = torch.from_numpy(batch[:, None]).to(device)
+        out.append(torch.log_softmax(model(x), dim=1).cpu().numpy()[:len(chunk)])
+    return np.concatenate(out)
+
+
+def rotation_score(logp: np.ndarray) -> float:
+    """Confianza media en las casillas que el modelo ve ocupadas."""
+    occupied = logp.argmax(axis=1) != 0
+    return float(logp.max(axis=1)[occupied].mean()) if occupied.any() else -np.inf
+
+
 @torch.no_grad()
 def predict_board(model, board: np.ndarray, device) -> tuple[np.ndarray, np.ndarray, int]:
-    """Prueba las 4 rotaciones y se queda con la de mayor confianza en las piezas.
+    """Elige el giro del tablero (k × 90°, antihorario) y lo clasifica.
 
-    Solo cuentan las casillas que el modelo ve ocupadas: una casilla vacía
-    es igual en cualquier giro, y con pocas piezas ahogaría la señal.
+    Primero las 64 casillas tal cual. Para los otros tres giros basta con las casillas
+    ocupadas, que son las que cambian al girar (una vacía es igual en cualquier giro):
+    las ROTATION_SQUARES más claramente ocupadas, giradas, en un solo lote (#13). Gana
+    el giro con más confianza media en sus piezas; si no es el 0, se clasifica entero.
 
     Devuelve (etiquetas 64, probabilidades 64×13, nº de giros de 90°).
     """
-    best = None
-    for k in range(4):
-        squares = crop_squares(np.ascontiguousarray(np.rot90(board, k)))
-        x = torch.from_numpy(squares[:, None]).to(device)
-        logp = torch.log_softmax(model(x), dim=1).cpu().numpy()
-        occupied = logp.argmax(axis=1) != 0
-        conf = logp.max(axis=1)[occupied].mean() if occupied.any() else -np.inf
-        if best is None or conf > best[0]:
-            best = (conf, logp.argmax(axis=1), np.exp(logp), k)
-    return best[1], best[2], best[3]
+    squares = crop_squares(board)
+    logp = run_squares(model, squares, device)
+    occupied = np.flatnonzero(logp.argmax(axis=1) != 0)
+    if len(occupied) == 0:
+        return logp.argmax(axis=1), np.exp(logp), 0
+    probe = occupied[np.argsort(logp[occupied, 0], kind="stable")[:ROTATION_SQUARES]]
+    turned = run_squares(model, np.concatenate(
+        [np.rot90(squares[probe], k, axes=(1, 2)) for k in (1, 2, 3)]), device)
+    scores = [rotation_score(logp[probe])] + [rotation_score(t) for t in np.split(turned, 3)]
+    k = int(np.argmax(scores))
+    if k:
+        logp = run_squares(model, rotate_squares(squares, k), device)
+    return logp.argmax(axis=1), np.exp(logp), k

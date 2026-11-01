@@ -33,6 +33,17 @@ def crop_squares(board: np.ndarray) -> np.ndarray:
     return out
 
 
+def rotate_squares(squares: np.ndarray, k: int) -> np.ndarray:
+    """Las casillas de crop_squares(np.rot90(board, k)) a partir de crop_squares(board).
+
+    Girar el tablero y recortar da lo mismo, píxel a píxel, que recortar y girar cada
+    casilla (con el borde replicado y INTER_AREA, que es simétrico): así se recorta una
+    vez y cada giro es solo reordenar y girar los recortes.
+    """
+    order = np.rot90(np.arange(64).reshape(8, 8), k).ravel()
+    return np.ascontiguousarray(np.rot90(squares[order], k, axes=(1, 2)))
+
+
 def labels_to_placement(labels) -> str:
     """64 etiquetas (orden a8..h1) -> parte de piezas del FEN."""
     rows = []

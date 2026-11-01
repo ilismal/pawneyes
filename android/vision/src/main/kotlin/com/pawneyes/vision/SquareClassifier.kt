@@ -9,7 +9,7 @@ import java.nio.channels.FileChannel
 import org.tensorflow.lite.Interpreter
 
 /**
- * El clasificador exportado por ml/export/export_tflite.py.
+ * El clasificador exportado por ml/export/export_tflite.py, con los pesos en int8 (#13).
  * Entrada float32 (64, 1, 64, 64) con valores 0..255; salida (64, 13) logits.
  */
 class SquareClassifier(model: ByteBuffer) : AutoCloseable {
@@ -18,14 +18,27 @@ class SquareClassifier(model: ByteBuffer) : AutoCloseable {
     private val input = ByteBuffer.allocateDirect(64 * px * px * 4).order(ByteOrder.nativeOrder())
     private val output = Array(64) { FloatArray(VisionSpec.CLASSES.length) }
 
-    /** `squares`: salida de [SquareCropper.crop]. */
+    /**
+     * Logits de n casillas seguidas (n·INPUT_PX² bytes, como las de [SquareCropper.crop]), en
+     * lotes de 64, el tamaño fijo del modelo; el último se rellena repitiendo su primera casilla.
+     */
     fun logits(squares: ByteArray): Array<FloatArray> {
-        require(squares.size == 64 * px * px)
-        input.rewind()
-        for (b in squares) input.putFloat((b.toInt() and 0xFF).toFloat())
-        input.rewind()
-        interpreter.run(input, output)
-        return Array(64) { output[it].copyOf() }
+        val cell = px * px
+        require(squares.isNotEmpty() && squares.size % cell == 0)
+        val n = squares.size / cell
+        val result = ArrayList<FloatArray>(n)
+        for (start in 0 until n step 64) {
+            val count = minOf(64, n - start)
+            input.rewind()
+            for (i in 0 until 64) {
+                val from = (start + if (i < count) i else 0) * cell
+                for (b in from until from + cell) input.putFloat((squares[b].toInt() and 0xFF).toFloat())
+            }
+            input.rewind()
+            interpreter.run(input, output)
+            for (i in 0 until count) result += output[i].copyOf()
+        }
+        return result.toTypedArray()
     }
 
     override fun close() = interpreter.close()

@@ -96,7 +96,7 @@ Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La
 
 ```
 foto ─► detector del tablero (OpenCV) ─► tablero enderezado 512×512
-     ─► 64 casillas ─► CNN pequeña (LiteRT) en las 4 rotaciones
+     ─► 64 casillas ─► CNN pequeña (LiteRT, pesos en int8)
      ─► elegir rotación + reglas de legalidad ─► posición
      ─► texto alrededor (Tesseract): ¿negras abajo? ¿turno? ─► editor / Stockfish
 ```
@@ -108,9 +108,11 @@ foto ─► detector del tablero (OpenCV) ─► tablero enderezado 512×512
    6 piezas × 2 colores). Se entrena **sobre todo con diagramas sintéticos**: el generador
    (`ml/synth`) dibuja tableros con 25 juegos de piezas (y reserva otros 3 para validar) y distintos estilos de casilla
    (rayado, punteado, gris liso…) y simula la foto (perspectiva, curvatura de la página,
-   sombras, desenfoque, ruido, JPEG). Después se ajusta con unas pocas fotos reales.
-3. **Rotación y legalidad**: se prueban las 4 orientaciones y se elige la de mayor confianza en
-   las casillas ocupadas; luego se corrigen errores imposibles (un rey de cada color, máximo de
+   sombras, desenfoque, ruido, JPEG). Después se ajusta con unas pocas fotos reales. En la app
+   va con los pesos cuantizados a int8: ocupa 312 KB y lee igual que el original.
+3. **Rotación y legalidad**: se elige la orientación con mayor confianza en las casillas
+   ocupadas. Las vacías son iguales en cualquier giro, así que basta con clasificar el tablero
+   una vez y girar después solo las piezas (como mucho 21, en una sola pasada del modelo); luego se corrigen errores imposibles (un rey de cada color, máximo de
    peones…) usando la segunda opción del modelo.
 4. **Texto de la página** (`ml/caption`): con la homografía del tablero se endereza también la
    página de alrededor y se pasa por Tesseract (modelo rápido de español). Del texto más cercano

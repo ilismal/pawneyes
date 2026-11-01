@@ -65,6 +65,22 @@ class VisionParityTest {
     }
 
     @Test
+    fun rotatedSquaresMatchRotatedBoard() {
+        // #13: girar los recortes da lo mismo que recortar el tablero girado, byte a byte.
+        for ((dir, b) in boards) {
+            val board = gray("$dir/${b.getString("board")}")
+            val squares = SquareCropper.crop(board)
+            for (k in 1 until 4) {
+                val turned = SquareCropper.rotate(board, k)
+                assertTrue("${b.getString("name")} k=$k",
+                    SquareCropper.crop(turned).contentEquals(SquareRotation.rotateSquares(squares, k)))
+                turned.release()
+            }
+            board.release()
+        }
+    }
+
+    @Test
     fun classifierMatchesPython() {
         SquareClassifier.fromAssets(context).use { model ->
             var worst = 0.0
@@ -76,7 +92,9 @@ class VisionParityTest {
                 }
             }
             log("modelo: diferencia máxima de logits $worst")
-            assertTrue("diferencia máxima $worst", worst < 1e-3)
+            // Con los pesos en int8 (#13), las activaciones se cuantizan al vuelo y el redondeo
+            // cambia un poco entre el Mac y el móvil (~0,01); la lectura sigue siendo la misma.
+            assertTrue("diferencia máxima $worst", worst < 0.05)
         }
     }
 
