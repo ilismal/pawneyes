@@ -56,15 +56,29 @@ object BoardDetector {
         // Mapas para medir el patrón: gris (casillas lisas) y densidad de tinta (rayados).
         val features = mutableListOf(gray)
         val candidates = mutableListOf<DoubleArray>()
+        val binaries = mutableListOf<Mat>()
         for (block in intArrayOf(31, 151)) {
             val binary = binarize(gray, block)
+            binaries += binary
             val ink = Mat()
             Imgproc.blur(binary, ink, Size(5.0, 5.0))
             features += ink
             candidates += quadsFromContours(binary)
             candidates += quadsFromSquares(binary)
         }
+        var found = select(features, candidates, refine, maxBoards)
+        if (found.isEmpty()) {
+            // Solo si no sale ningún tablero: así lo que ya se detectaba no cambia (#2).
+            val clean = withoutLines(binaries[1], binaries[0])
+            found = select(features, quadsFromSquares(clean), refine, maxBoards)
+            clean.release()
+        }
+        return found.map { (q, sc) -> Detection(DoubleArray(8) { q[it] / scale }, sc) }
+    }
 
+    /** Port de _select: los mejores candidatos que no se solapan, ya ajustados, en coordenadas de trabajo. */
+    private fun select(features: List<Mat>, candidates: List<DoubleArray>, refine: Boolean,
+                       maxBoards: Int): List<Pair<DoubleArray, Double>> {
         val scored = candidates.map { it to score(features, it) }
         // sortedByDescending es estable: a igual puntuación, el primer candidato (como antes).
         val order = scored.indices.sortedByDescending { scored[it].second }
@@ -82,7 +96,7 @@ object BoardDetector {
                 return emptyList()  // el mejor candidato no llega: no hay tablero
             }
         }
-        return found.map { (q, sc) -> Detection(DoubleArray(8) { q[it] / scale }, sc) }
+        return found
     }
 
     /**
@@ -236,6 +250,20 @@ object BoardDetector {
         Imgproc.morphologyEx(binary, binary, Imgproc.MORPH_CLOSE, Mat.ones(3, 3, CvType.CV_8U))
         blur.release()
         return binary
+    }
+
+    /**
+     * Port de _without_lines (#2): la tinta del umbral amplio menos la del fino. Con líneas
+     * entre todas las casillas, el amplio une las oscuras por las esquinas en una sola malla;
+     * el fino capta esas líneas (y no el gris liso de las casillas), y al restarlas se separan.
+     */
+    private fun withoutLines(binary: Mat, lines: Mat): Mat {
+        val notLines = Mat()
+        Core.bitwise_not(lines, notLines)
+        val out = Mat()
+        Core.bitwise_and(binary, notLines, out)
+        notLines.release()
+        return out
     }
 
     /** Candidatos a partir del marco: envolvente convexa de cada contorno grande. */

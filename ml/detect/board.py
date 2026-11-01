@@ -230,6 +230,16 @@ def _quads_from_lattice(squares, cluster, adj) -> list[np.ndarray]:
     return quads
 
 
+def _without_lines(binary: np.ndarray, lines: np.ndarray) -> np.ndarray:
+    """Tinta de `binary` (umbral amplio) menos la de `lines` (umbral fino) (#2).
+
+    Con líneas entre todas las casillas, el umbral amplio une las casillas oscuras por
+    las esquinas en una sola malla y no sale ninguna suelta. El fino capta esas líneas
+    (y no el gris liso de las casillas): al restarlas, las casillas quedan separadas.
+    """
+    return cv2.bitwise_and(binary, cv2.bitwise_not(lines))
+
+
 def _quads_from_squares(binary: np.ndarray) -> list[np.ndarray]:
     """Candidatos a partir de las casillas oscuras (no necesita marco)."""
     quads = []
@@ -277,12 +287,24 @@ def find_board_quads(img: np.ndarray, max_boards: int = MAX_BOARDS) -> list[tupl
     # la densidad de tinta, para rayados tan claros que apenas oscurecen.
     features = [gray]
     candidates = []
+    binaries = []
     for block in (31, 151):
         binary = _binarize(gray, block)
+        binaries.append(binary)
         features.append(cv2.blur(binary, (5, 5)))
         candidates += _quads_from_contours(binary)
         candidates += _quads_from_squares(binary)
 
+    found = _select(features, candidates, max_boards)
+    if not found:
+        # Solo si no sale ningún tablero: así lo que ya se detectaba no cambia (#2).
+        found = _select(features, _quads_from_squares(_without_lines(binaries[1], binaries[0])), max_boards)
+    return [(q / scale, sc) for q, sc in found]
+
+
+def _select(features: list[np.ndarray], candidates: list[np.ndarray],
+            max_boards: int) -> list[tuple[np.ndarray, float]]:
+    """Los mejores candidatos que no se solapan, ya ajustados, en coordenadas de trabajo."""
     scored = [(quad, _score(features, quad)) for quad in candidates]
     # Orden estable: a igual puntuación, el primer candidato (como la búsqueda original).
     order = sorted(range(len(scored)), key=lambda i: -scored[i][1])
@@ -300,7 +322,7 @@ def find_board_quads(img: np.ndarray, max_boards: int = MAX_BOARDS) -> list[tupl
             found.append((quad, score))
         elif not found:
             return []  # el mejor candidato no llega: no hay tablero (como antes)
-    return [(q / scale, sc) for q, sc in found]
+    return found
 
 
 def find_board_quad(img: np.ndarray) -> tuple[np.ndarray, float] | None:

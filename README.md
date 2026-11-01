@@ -103,7 +103,9 @@ foto ─► detector del tablero (OpenCV) ─► tablero enderezado 512×512
 
 1. **Detector** (`ml/detect`, portado a `android/vision`): binarización adaptativa, casillas
    oscuras agrupadas por vecindad diagonal, homografía y un ajuste fino que maximiza el
-   contraste de tablero de ajedrez. No necesita que el diagrama tenga marco.
+   contraste de tablero de ajedrez. No necesita que el diagrama tenga marco. Si no encuentra
+   nada, prueba otra vez sin las líneas finas que algunos libros trazan entre casillas, que
+   unen las oscuras por las esquinas.
 2. **Clasificador de casillas** (`ml/train`): una CNN de ~300 000 parámetros, 13 clases (vacía +
    6 piezas × 2 colores). Se entrena **sobre todo con diagramas sintéticos**: el generador
    (`ml/synth`) dibuja tableros con 25 juegos de piezas (y reserva otros 3 para validar) y distintos estilos de casilla
