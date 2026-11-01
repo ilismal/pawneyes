@@ -129,8 +129,8 @@ La implementación Android reproduce exactamente la de Python: hay tests que com
 generados en Python. Los del repositorio (`fixtures-publicos/`) salen de diagramas sintéticos,
 así que el CI los ejecuta en cada cambio.
 
-**Precisión**: en mis 10 fotos de prueba (que no se publican, ver abajo) acierta el 99,5 % de las
-casillas y lee 9 de los 10 tableros sin ningún error. Funciona mejor con los libros que ha
+**Precisión**: en mis 11 fotos de prueba (que no se publican, ver abajo) encuentra el tablero en
+todas, acierta el 99,3 % de las casillas y lee 9 de los 11 tableros sin ningún error. Funciona mejor con los libros que ha
 visto en el ajuste fino; con estilos de pieza muy distintos se equivoca más.
 
 ## Estructura
