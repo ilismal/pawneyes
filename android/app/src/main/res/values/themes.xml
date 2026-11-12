@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Tema de la ventana hasta que Compose pinta (y de la pantalla de inicio en Android 12+):
+      el fondo es el de Material 3 claro u oscuro, para que no haya un destello blanco al
+      abrir la app en modo oscuro (#38).
+    -->
+    <style name="Theme.Pawneyes" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+
+    <color name="window_background">#FEF7FF</color>
+</resources>
