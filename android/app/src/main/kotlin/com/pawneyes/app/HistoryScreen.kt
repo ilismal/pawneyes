@@ -60,9 +60,12 @@ fun HistoryScreen(
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var renaming by remember { mutableStateOf<HistoryEntry?>(null) }
-    var deleting by remember { mutableStateOf<HistoryEntry?>(null) }
-    var clearing by remember { mutableStateOf(false) }
+    // Por id, para que los diálogos sigan abiertos al girar el móvil (#35).
+    var renamingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var clearing by rememberSaveable { mutableStateOf(false) }
+    val renaming = entries.find { it.id == renamingId }
+    val deleting = entries.find { it.id == deletingId }
     val shown = ScanHistory.search(entries, query)
 
     Column(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -84,7 +87,7 @@ fun HistoryScreen(
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(shown, key = { it.id }) { entry ->
                 HistoryRow(entry, thumbnail(entry.id), onOpen = { onOpen(entry) },
-                    onRename = { renaming = entry }, onDelete = { deleting = entry })
+                    onRename = { renamingId = entry.id }, onDelete = { deletingId = entry.id })
             }
         }
     }
@@ -92,26 +95,26 @@ fun HistoryScreen(
     renaming?.let { entry ->
         var label by rememberSaveable(entry.id) { mutableStateOf(entry.label) }
         AlertDialog(
-            onDismissRequest = { renaming = null },
+            onDismissRequest = { renamingId = null },
             title = { Text(stringResource(R.string.history_label_title)) },
             text = {
                 OutlinedTextField(value = label, onValueChange = { label = it }, singleLine = true,
                     placeholder = { Text(stringResource(R.string.history_label_hint)) })
             },
             confirmButton = {
-                TextButton(onClick = { onRename(entry, label); renaming = null }) { Text(stringResource(R.string.history_save)) }
+                TextButton(onClick = { onRename(entry, label); renamingId = null }) { Text(stringResource(R.string.history_save)) }
             },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.game_cancel)) } },
+            dismissButton = { TextButton(onClick = { renamingId = null }) { Text(stringResource(R.string.game_cancel)) } },
         )
     }
     deleting?.let { entry ->
         AlertDialog(
-            onDismissRequest = { deleting = null },
+            onDismissRequest = { deletingId = null },
             title = { Text(stringResource(R.string.history_delete_title)) },
             confirmButton = {
-                TextButton(onClick = { onDelete(entry); deleting = null }) { Text(stringResource(R.string.history_delete)) }
+                TextButton(onClick = { onDelete(entry); deletingId = null }) { Text(stringResource(R.string.history_delete)) }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.game_cancel)) } },
+            dismissButton = { TextButton(onClick = { deletingId = null }) { Text(stringResource(R.string.game_cancel)) } },
         )
     }
     if (clearing) {

@@ -29,7 +29,10 @@ import com.pawneyes.chess.Position
 @Composable
 fun BookLineDialog(start: Position, onLoad: (List<Move>) -> Unit, onDismiss: () -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
-    var result by remember { mutableStateOf<BookLine.Result?>(null) }
+    // Se guarda si ya se ha intentado cargar, no el resultado: al girar el móvil se vuelve a
+    // analizar el texto y el error sigue a la vista (#35).
+    var checked by rememberSaveable { mutableStateOf(false) }
+    val result = remember(checked, text, start) { if (checked) BookLine.parse(start, text) else null }
     val error = result as? BookLine.Result.Error
 
     AlertDialog(
@@ -40,7 +43,7 @@ fun BookLineDialog(start: Position, onLoad: (List<Move>) -> Unit, onDismiss: () 
                 Text(stringResource(R.string.book_hint), style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { text = it; result = null },
+                    onValueChange = { text = it; checked = false },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     placeholder = { Text(stringResource(R.string.book_placeholder)) },
@@ -69,7 +72,7 @@ fun BookLineDialog(start: Position, onLoad: (List<Move>) -> Unit, onDismiss: () 
             } else {
                 TextButton(onClick = {
                     val r = BookLine.parse(start, text)
-                    result = r
+                    checked = true
                     if (r is BookLine.Result.Ok && r.moves.isNotEmpty()) onLoad(r.moves)
                 }, enabled = text.isNotBlank()) { Text(stringResource(R.string.book_load)) }
             }

@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.listSaver
 import com.pawneyes.board.LocalPieceLetters
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +32,17 @@ import com.pawneyes.chess.Position
 class Exploration(val line: Line, val index: Int) {
     val position: Position get() = line.positions[index]
     fun at(i: Int) = Exploration(line, i.coerceIn(0, line.size))
+
+    companion object {
+        /** Para no perder la línea al girar el móvil o cambiar de tema (#35). */
+        val Saver = listSaver<Exploration?, Any>(
+            save = { e -> if (e == null) emptyList() else listOf(e.line.start.toFen(), ArrayList(e.line.moves.map { it.uci }), e.index) },
+            restore = { s ->
+                @Suppress("UNCHECKED_CAST")
+                if (s.isEmpty()) null else Exploration(Line(Position.fromFen(s[0] as String), s[1] as List<String>), s[2] as Int)
+            },
+        )
+    }
 }
 
 /**

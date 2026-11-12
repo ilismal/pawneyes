@@ -203,8 +203,8 @@ fun BoardEditor(
     alternativesFor: ((Int) -> List<Pair<Piece?, Float>>)? = null,
     header: @Composable () -> Unit = {},
 ) {
-    var choosing by remember { mutableStateOf<Int?>(null) }
-    var editing by remember { mutableStateOf<Int?>(null) }  // elegir cualquier pieza (#26, #27)
+    var choosing by rememberSaveable { mutableStateOf<Int?>(null) }
+    var editing by rememberSaveable { mutableStateOf<Int?>(null) }  // elegir cualquier pieza (#26, #27)
     val onSquare: (Int) -> Unit = { sq ->
         val options = alternativesFor?.invoke(sq).orEmpty()
         if (state.selected == null && sq in state.marked && options.size > 1) choosing = sq else state.tap(sq)

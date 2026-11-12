@@ -133,7 +133,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         var settingsOpen by rememberSaveable { mutableStateOf(false) }
         var bookLine by rememberSaveable { mutableStateOf(false) }
         val editor = rememberBoardEditorState()
-        var exploration by remember { mutableStateOf<Exploration?>(null) }
+        var exploration by rememberSaveable(stateSaver = Exploration.Saver) { mutableStateOf(null) }
         // El motor analiza lo que se ve: la posición del editor o la de la línea que se recorre.
         val shown = exploration?.position ?: editor.position
         LaunchedEffect(shown) { analysisVm.onPosition(shown) }
@@ -483,7 +483,7 @@ private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: (
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
-    var confirm by remember { mutableStateOf(false) }
+    var confirm by rememberSaveable { mutableStateOf(false) }
     val n = vm.trainingCount
     Box {
         IconButton(onClick = { open = true }) { Text("⋮", style = MaterialTheme.typography.titleLarge) }
