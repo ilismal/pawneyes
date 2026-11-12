@@ -35,7 +35,11 @@ object PhotoLoader {
         return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE  // OpenCV no lee bitmaps de GPU
             decoder.setTargetSampleSize(sampleSize(info.size.width, info.size.height))
-        }.copy(Bitmap.Config.ARGB_8888, false)
+        }.let {
+            // Casi siempre ya es ARGB_8888; las fotos HDR o de 10 bits llegan en RGBA_F16 o
+            // RGBA_1010102, que el escáner no lee. Solo entonces se copia (#42).
+            if (it.config == Bitmap.Config.ARGB_8888) it else it.copy(Bitmap.Config.ARGB_8888, false)
+        }
     }
 
     private fun loadLegacy(context: Context, uri: Uri): Bitmap {
