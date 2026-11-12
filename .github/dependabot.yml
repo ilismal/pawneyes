@@ -1,0 +1,11 @@
+# Las acciones de los workflows van fijadas por hash de commit (#31); Dependabot propone
+# una PR cuando sale una versión nueva, con el hash y la etiqueta actualizados.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      acciones:
+        patterns: ["*"]
