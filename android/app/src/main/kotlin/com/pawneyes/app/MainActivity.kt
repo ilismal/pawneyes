@@ -113,6 +113,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** De dónde llega la foto que se va a escanear. */
+private enum class ScanSource { CAMERA, GALLERY, SHARED }
+
 @Composable
 private fun PawneyesTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
@@ -166,12 +169,47 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         }
         val scan = remember(vm, editor) { { uri: Uri -> vm.scan(uri) { editor.showScan(it) } } }
         val picker = rememberLauncherForActivityResult(PickVisualMedia()) { uri -> uri?.let(scan) }
+        // El escaneo se ve en el editor: antes de escanear se deja lo que lo tape (#36). Una
+        // partida o un ejercicio no se dejan sin preguntar.
+        var leaving by rememberSaveable { mutableStateOf<ScanSource?>(null) }
+        var sharedUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+        val startScan = { source: ScanSource ->
+            if (gameVm.game != null) gameVm.exit()
+            if (analysisVm.exercise != null) analysisVm.exitExercise()
+            history = false
+            settingsOpen = false
+            exploration = null
+            when (source) {
+                ScanSource.CAMERA -> camera = true
+                ScanSource.GALLERY -> picker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
+                ScanSource.SHARED -> sharedUri?.let(scan)
+            }
+            if (source == ScanSource.SHARED) sharedUri = null
+        }
+        val requestScan = { source: ScanSource ->
+            if (gameVm.game != null || analysisVm.exercise != null) leaving = source else startScan(source)
+        }
         LaunchedEffect(shared.value) {
             shared.value?.let {
                 shared.value = null
                 camera = false
-                scan(it)
+                sharedUri = it
+                requestScan(ScanSource.SHARED)
             }
+        }
+        leaving?.let { source ->
+            AlertDialog(
+                onDismissRequest = { leaving = null; sharedUri = null },
+                text = {
+                    Text(stringResource(if (gameVm.game != null) R.string.scan_leave_game else R.string.scan_leave_exercise))
+                },
+                confirmButton = {
+                    TextButton(onClick = { leaving = null; startScan(source) }) { Text(stringResource(R.string.scan_leave_yes)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { leaving = null; sharedUri = null }) { Text(stringResource(R.string.game_cancel)) }
+                },
+            )
         }
         if (camera) {
             BackHandler { camera = false }
@@ -190,13 +228,12 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     title = { Text(stringResource(R.string.app_name)) },
                     actions = {
                         val idle = vm.state !is ScanState.Scanning
-                        TextButton(onClick = { camera = true }, enabled = idle) {
+                        TextButton(onClick = { requestScan(ScanSource.CAMERA) }, enabled = idle) {
                             Text(stringResource(R.string.scan_camera))
                         }
-                        TextButton(
-                            onClick = { picker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
-                            enabled = idle,
-                        ) { Text(stringResource(R.string.scan_gallery)) }
+                        TextButton(onClick = { requestScan(ScanSource.GALLERY) }, enabled = idle) {
+                            Text(stringResource(R.string.scan_gallery))
+                        }
                         TrainingMenu(vm, onHistory = { history = true }, onSettings = { settingsOpen = true })
                     },
                 )
