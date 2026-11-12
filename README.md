@@ -169,7 +169,24 @@ posiciones de un libro sobra. El modelo ya entrenado está en `ml/models/square_
 
 Para una APK release firmada, crea `android/release.jks` y `android/keystore.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). El workflow
-`.github/workflows/release.yml` hace lo mismo en GitHub Actions al publicar una etiqueta `vX.Y.Z`.
+`.github/workflows/release.yml` hace lo mismo en GitHub Actions al publicar una etiqueta `vX.Y.Z`
+(allí Gradle compila sin la clave y la APK se firma en un paso aparte).
+
+Todo lo que Gradle descarga (plugins y librerías, también Tesseract4Android, que viene de
+JitPack) se comprueba contra las sumas SHA-256 de `android/gradle/verification-metadata.xml`,
+y la distribución de Gradle contra `distributionSha256Sum`: si algo cambia sin cambiar de
+versión, la compilación falla. Al subir o añadir una dependencia, regenera las sumas con las
+mismas tareas que la CI y la release y revisa el diff:
+
+```sh
+./gradlew --write-verification-metadata sha256 --no-configuration-cache \
+  :core:chess:test :vision:testDebugUnitTest :engine:testDebugUnitTest :feature:camera:testDebugUnitTest \
+  :feature:board:testDebugUnitTest :maia:testDebugUnitTest :app:testDebugUnitTest \
+  lintDebug :app:assembleDebug :app:assembleRelease :vision:connectedDebugAndroidTest
+```
+
+`aapt2` es distinto en cada sistema: si cambia la versión del plugin de Android, añade a mano
+la suma del `-linux.jar` (el que usa la CI) además del de tu sistema.
 
 ### Mejorar el modelo con tus escaneos
 

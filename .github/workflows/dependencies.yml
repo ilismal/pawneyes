@@ -29,3 +29,6 @@ jobs:
       - uses: gradle/actions/dependency-submission@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           build-root-directory: android
+          # Resuelve todas las configuraciones, también las que la compilación no descarga y
+          # no tienen suma en verification-metadata.xml (#32): aquí no se compila ni se ejecuta nada.
+          additional-arguments: --dependency-verification=lenient
