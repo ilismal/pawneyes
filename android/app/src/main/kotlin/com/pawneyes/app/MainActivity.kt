@@ -11,6 +11,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
+import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -491,7 +493,7 @@ private fun ScanPanel(
     }
 }
 
-/** Menú ⋮: exportar o borrar los escaneos guardados para entrenar. */
+/** Menú ⋮: historial (abrir, exportar, importar), ajustes y escaneos guardados para entrenar. */
 @Composable
 private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: () -> Unit) {
     val context = LocalContext.current
@@ -499,12 +501,56 @@ private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: (
     var open by remember { mutableStateOf(false) }
     var confirm by rememberSaveable { mutableStateOf(false) }
     val n = vm.trainingCount
+    val toast = { text: String -> Toast.makeText(context, text, Toast.LENGTH_LONG).show() }
+    // Exportar e importar el historial (#44) con el selector de documentos del sistema: el ZIP va
+    // donde elija el usuario y la app no se queda con una copia.
+    val exportHistory = rememberLauncherForActivityResult(CreateDocument("application/zip")) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching { vm.exportHistory(uri) }
+                .onSuccess { toast(context.getString(R.string.history_exported)) }
+                .onFailure { toast(context.getString(R.string.history_export_failed)) }
+        }
+    }
+    val importHistory = rememberLauncherForActivityResult(OpenDocument()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching { vm.importHistory(uri) }
+                .onSuccess { r ->
+                    val res = context.resources
+                    toast(when {
+                        r.added == 0 -> res.getQuantityString(R.plurals.history_import_nothing, r.present, r.present)
+                        r.present == 0 -> res.getQuantityString(R.plurals.history_imported, r.added, r.added)
+                        else -> res.getQuantityString(R.plurals.history_imported, r.added, r.added) + " " +
+                            res.getQuantityString(R.plurals.history_import_present, r.present, r.present)
+                    })
+                }
+                .onFailure { toast(context.getString(R.string.history_import_failed)) }
+        }
+    }
     Box {
         IconButton(onClick = { open = true }) { Text("⋮", style = MaterialTheme.typography.titleLarge) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.history_open, vm.historyEntries.size)) },
                 onClick = { open = false; onHistory() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.history_export)) },
+                enabled = vm.historyEntries.isNotEmpty(),
+                onClick = {
+                    open = false
+                    exportHistory.launch("pawneyes-historial-" +
+                        java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(java.util.Date()) + ".zip")
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.history_import)) },
+                onClick = {
+                    open = false
+                    // Algunos proveedores (Drive, Descargas) no siempre marcan los ZIP como tales.
+                    importHistory.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"))
+                },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.settings_title)) },

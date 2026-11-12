@@ -105,6 +105,23 @@
     <string name="game_analyse">Analizar esta posición</string>
     <string name="game_exit">Salir</string>
     <string name="history_open">Historial de escaneos (%1$d)</string>
+    <string name="history_export">Exportar historial</string>
+    <string name="history_import">Importar historial</string>
+    <string name="history_exported">Historial exportado.</string>
+    <string name="history_export_failed">No se ha podido exportar el historial.</string>
+    <string name="history_import_failed">No se ha podido importar: el archivo no es un historial exportado desde Pawneyes.</string>
+    <plurals name="history_imported">
+        <item quantity="one">Importado %1$d escaneo.</item>
+        <item quantity="other">Importados %1$d escaneos.</item>
+    </plurals>
+    <plurals name="history_import_nothing">
+        <item quantity="one">No había escaneos nuevos: ya estaba en el historial.</item>
+        <item quantity="other">No había escaneos nuevos: los %1$d ya estaban en el historial.</item>
+    </plurals>
+    <plurals name="history_import_present">
+        <item quantity="one">%1$d ya estaba en el historial.</item>
+        <item quantity="other">%1$d ya estaban en el historial.</item>
+    </plurals>
     <plurals name="history_title">
         <item quantity="one">Historial · %1$d escaneo</item>
         <item quantity="other">Historial · %1$d escaneos</item>

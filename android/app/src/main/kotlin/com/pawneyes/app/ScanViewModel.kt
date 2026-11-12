@@ -280,6 +280,22 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
 
     fun thumbnailFile(id: String): java.io.File = history.thumbnail(id)
 
+    /** Guarda el historial en `uri` (un documento creado con el selector del sistema). */
+    suspend fun exportHistory(uri: Uri) = withContext(Dispatchers.IO) {
+        val out = getApplication<Application>().contentResolver.openOutputStream(uri, "wt") ?: error("no se pudo escribir")
+        out.use { history.export(it) }
+    }
+
+    /** Añade las entradas de un historial exportado que no estén ya. */
+    suspend fun importHistory(uri: Uri): ScanHistory.Imported {
+        val result = withContext(Dispatchers.IO) {
+            val input = getApplication<Application>().contentResolver.openInputStream(uri) ?: error("no se pudo leer")
+            input.use { history.import(it) }
+        }
+        historyEntries = withContext(Dispatchers.IO) { history.entries() }
+        return result
+    }
+
     suspend fun exportTraining(): java.io.File = withContext(Dispatchers.IO) { training.exportZip() }
 
     fun clearTraining() {

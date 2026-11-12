@@ -81,6 +81,8 @@
   coordenadas, notación con letras españolas o inglesas, y líneas y profundidad del análisis.
 - **Historial de escaneos**: cada escaneo se guarda (miniatura, posición con tus correcciones y
   fecha) y se puede etiquetar con el libro y la página, buscar y volver a abrir en el editor.
+  Como no entra en las copias de Google, se puede exportar a un ZIP (menú ⋮) e importarlo en
+  otro móvil; al importar se añade a lo que haya, sin duplicar.
 - **Guardar escaneos corregidos** para mejorar el modelo con tus propios libros (ver abajo).
 
 Requiere Android 8.0 o superior en un móvil ARM64 (casi todos los actuales). La APK ocupa unos
