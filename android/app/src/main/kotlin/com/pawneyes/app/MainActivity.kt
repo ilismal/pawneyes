@@ -1,9 +1,11 @@
 package com.pawneyes.app
 
+import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -79,22 +81,34 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) shared.value = intent.sharedImage()
+        if (savedInstanceState == null) shared.value = sharedImage(intent)
         setContent { PawneyesApp(shared) }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.sharedImage()?.let { shared.value = it }
+        sharedImage(intent)?.let { shared.value = it }
+    }
+
+    private fun sharedImage(intent: Intent): Uri? {
+        if (intent.action != Intent.ACTION_SEND || intent.type?.startsWith("image/") != true) return null
+        val uri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java) ?: return null
+        if (fromOtherApp(uri)) return uri
+        Toast.makeText(this, R.string.share_rejected, Toast.LENGTH_LONG).show()
+        return null
+    }
+
+    /**
+     * Solo fotos que otra app comparte por su ContentProvider (#33): nada de `file://` ni de
+     * los proveedores de la propia app, que darían acceso a sus ficheros internos.
+     */
+    private fun fromOtherApp(uri: Uri): Boolean {
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT) return false
+        val authority = uri.authority ?: return false
+        @Suppress("DEPRECATION")  // la versión con ComponentInfoFlags es de API 33
+        return packageManager.resolveContentProvider(authority, 0)?.packageName != packageName
     }
 }
-
-private fun Intent.sharedImage(): Uri? =
-    if (action == Intent.ACTION_SEND && type?.startsWith("image/") == true) {
-        IntentCompat.getParcelableExtra(this, Intent.EXTRA_STREAM, Uri::class.java)
-    } else {
-        null
-    }
 
 @Composable
 private fun PawneyesTheme(content: @Composable () -> Unit) {
