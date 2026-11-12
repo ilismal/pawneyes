@@ -61,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -501,6 +502,7 @@ private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: (
     var open by remember { mutableStateOf(false) }
     var confirm by rememberSaveable { mutableStateOf(false) }
     val n = vm.trainingCount
+    val res = LocalResources.current
     val toast = { text: String -> Toast.makeText(context, text, Toast.LENGTH_LONG).show() }
     // Exportar e importar el historial (#44) con el selector de documentos del sistema: el ZIP va
     // donde elija el usuario y la app no se queda con una copia.
@@ -508,8 +510,8 @@ private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: (
         uri ?: return@rememberLauncherForActivityResult
         scope.launch {
             runCatching { vm.exportHistory(uri) }
-                .onSuccess { toast(context.getString(R.string.history_exported)) }
-                .onFailure { toast(context.getString(R.string.history_export_failed)) }
+                .onSuccess { toast(res.getString(R.string.history_exported)) }
+                .onFailure { toast(res.getString(R.string.history_export_failed)) }
         }
     }
     val importHistory = rememberLauncherForActivityResult(OpenDocument()) { uri ->
@@ -517,7 +519,6 @@ private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: (
         scope.launch {
             runCatching { vm.importHistory(uri) }
                 .onSuccess { r ->
-                    val res = context.resources
                     toast(when {
                         r.added == 0 -> res.getQuantityString(R.plurals.history_import_nothing, r.present, r.present)
                         r.present == 0 -> res.getQuantityString(R.plurals.history_imported, r.added, r.added)
@@ -525,7 +526,7 @@ private fun TrainingMenu(vm: ScanViewModel, onHistory: () -> Unit, onSettings: (
                             res.getQuantityString(R.plurals.history_import_present, r.present, r.present)
                     })
                 }
-                .onFailure { toast(context.getString(R.string.history_import_failed)) }
+                .onFailure { toast(res.getString(R.string.history_import_failed)) }
         }
     }
     Box {
