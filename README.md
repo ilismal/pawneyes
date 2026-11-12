@@ -179,7 +179,8 @@ El modelo acierta mejor con los libros que ha visto. Para enseñarle los tuyos:
    **«Guardar para entrenar»**. Se guarda la foto (reducida, ya derecha y sin metadatos EXIF
    ni GPS) con la posición del tablero; no sale del móvil hasta que la exportes.
 2. Cuando tengas unas cuantas, en el menú ⋮, **«Exportar para entrenar»** y pásate el ZIP al
-   ordenador.
+   ordenador. La app no se queda con una copia: el ZIP se borra al exportar de nuevo, al borrar
+   los escaneos guardados o, pasada una hora, la próxima vez que se abra.
 3. Impórtalo y haz un ajuste fino:
 
    ```sh

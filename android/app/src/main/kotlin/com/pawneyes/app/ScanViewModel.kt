@@ -214,6 +214,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch { historyEntries = withContext(Dispatchers.IO) { history.entries() } }
+        viewModelScope.launch(Dispatchers.IO) { training.deleteOldExports() }
     }
 
     private fun addToHistory(result: ScanResult): HistoryEntry {

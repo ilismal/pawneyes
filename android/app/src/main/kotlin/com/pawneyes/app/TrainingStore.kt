@@ -17,10 +17,16 @@ import java.util.zip.ZipOutputStream
  * el bitmap, así que no lleva EXIF ni GPS) y un .fen con la posición corregida,
  * el mismo formato que entrenamiento/ en ml/. Se quedan en el móvil hasta que se
  * exportan.
+ *
+ * El ZIP exportado lleva fotos de libros: no se deja en la caché más de lo necesario (#34).
  */
-class TrainingStore(context: Context) {
-    private val dir = File(context.filesDir, "entrenamiento").apply { mkdirs() }
-    private val exportDir = File(context.cacheDir, "shared").apply { mkdirs() }
+class TrainingStore(private val dir: File, private val exportDir: File) {
+    constructor(context: Context) : this(File(context.filesDir, "entrenamiento"), File(context.cacheDir, "shared"))
+
+    init {
+        dir.mkdirs()
+        exportDir.mkdirs()
+    }
 
     fun count(): Int = dir.listFiles { f -> f.extension == "fen" }?.size ?: 0
 
@@ -41,7 +47,8 @@ class TrainingStore(context: Context) {
 
     /** ZIP con todas las fotos y .fen guardados, listo para compartir. */
     fun exportZip(): File {
-        val zip = File(exportDir, "pawneyes-entrenamiento-" +
+        deleteExports()
+        val zip = File(exportDir, EXPORT_PREFIX +
             SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(Date()) + ".zip")
         ZipOutputStream(zip.outputStream()).use { out ->
             dir.listFiles()?.sortedBy { it.name }?.forEach { f ->
@@ -55,5 +62,22 @@ class TrainingStore(context: Context) {
 
     fun clear() {
         dir.listFiles()?.forEach { it.delete() }
+        deleteExports()
+    }
+
+    /**
+     * Al arrancar, los ZIP de exportaciones anteriores. Solo los de más de una hora: la app
+     * con la que se compartió puede estar leyéndolo todavía (una subida a la nube, por ejemplo).
+     */
+    fun deleteOldExports(now: Long = System.currentTimeMillis()) = deleteExports { now - it.lastModified() > EXPORT_TTL_MS }
+
+    private fun deleteExports(also: (File) -> Boolean = { true }) {
+        exportDir.listFiles { f -> f.name.startsWith(EXPORT_PREFIX) && f.extension == "zip" }
+            ?.filter(also)?.forEach { it.delete() }
+    }
+
+    companion object {
+        private const val EXPORT_PREFIX = "pawneyes-entrenamiento-"
+        const val EXPORT_TTL_MS = 60 * 60 * 1000L
     }
 }
