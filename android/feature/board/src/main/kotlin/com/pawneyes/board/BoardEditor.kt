@@ -44,8 +44,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -205,20 +207,23 @@ fun BoardEditor(
 ) {
     var choosing by rememberSaveable { mutableStateOf<Int?>(null) }
     var editing by rememberSaveable { mutableStateOf<Int?>(null) }  // elegir cualquier pieza (#26, #27)
+    // Vibración corta al soltar una pieza, al elegir la pieza de una casilla y al mantener pulsado (#39).
+    val haptic = LocalHapticFeedback.current
+    val confirm = { haptic.performHapticFeedback(HapticFeedbackType.Confirm) }
     val onSquare: (Int) -> Unit = { sq ->
         val options = alternativesFor?.invoke(sq).orEmpty()
         if (state.selected == null && sq in state.marked && options.size > 1) choosing = sq else state.tap(sq)
     }
     choosing?.let { sq ->
         AlternativesDialog(sq, alternativesFor!!(sq),
-            onPick = { piece -> state.resolve(sq, piece); choosing = null },
-            onKeep = { state.accept(sq); choosing = null },
+            onPick = { piece -> confirm(); state.resolve(sq, piece); choosing = null },
+            onKeep = { confirm(); state.accept(sq); choosing = null },
             onOther = { choosing = null; editing = sq },
             onDismiss = { choosing = null })
     }
     editing?.let { sq ->
         PieceChooserDialog(sq, state.position[sq],
-            onPick = { piece -> state.set(sq, piece); editing = null },
+            onPick = { piece -> confirm(); state.set(sq, piece); editing = null },
             onDismiss = { editing = null })
     }
     Column(
@@ -228,8 +233,16 @@ fun BoardEditor(
         header()
         ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows,
             highlighted = setOfNotNull(state.selected), onSquareClick = onSquare,
-            onSquareLongClick = { sq -> state.deselect(); editing = sq },
-            onDragStart = { state.deselect(); true }, onDrop = state::move)
+            onSquareLongClick = { sq ->
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                state.deselect()
+                editing = sq
+            },
+            onDragStart = { state.deselect(); true },
+            onDrop = { from, to ->
+                if (to != null && to != from) confirm()
+                state.move(from, to)
+            })
         belowBoard()
         SideToMove(state)  // justo bajo el tablero: es lo primero que hay que decidir tras escanear
         PiecePalette(state)

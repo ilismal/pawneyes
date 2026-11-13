@@ -14,6 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,6 +43,12 @@ fun MoveInputBoard(
     var promotion by remember(position) { mutableStateOf<List<Move>?>(null) }
     val legal = remember(position) { position.legalMoves() }
     val targets = selected?.let { s -> legal.filter { it.from == s }.mapTo(mutableSetOf()) { it.to } }.orEmpty()
+    // Una vibración corta al hacer la jugada, también al soltar una pieza arrastrada (#39).
+    val haptic = LocalHapticFeedback.current
+    fun play(move: Move) {
+        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+        onMove(move)
+    }
 
     fun tap(square: Int) {
         val from = selected
@@ -49,7 +57,7 @@ fun MoveInputBoard(
             candidates.size > 1 -> promotion = candidates      // coronación: hay que elegir pieza
             candidates.size == 1 -> {
                 selected = null
-                onMove(candidates.first())
+                play(candidates.first())
             }
             position[square]?.side == position.sideToMove -> selected = if (square == from) null else square
             else -> selected = null
@@ -94,7 +102,7 @@ fun MoveInputBoard(
                             modifier = Modifier.size(56.dp).clickable {
                                 promotion = null
                                 selected = null
-                                onMove(move)
+                                play(move)
                             },
                         )
                     }
