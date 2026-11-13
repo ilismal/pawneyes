@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,6 +20,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,12 +31,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -43,6 +50,7 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val DATE = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.forLanguageTag("es"))
@@ -54,7 +62,9 @@ fun HistoryScreen(
     thumbnail: (String) -> File,
     onOpen: (HistoryEntry) -> Unit,
     onRename: (HistoryEntry, String) -> Unit,
-    onDelete: (HistoryEntry) -> Unit,
+    /** Borra al momento; devuelve lo necesario para deshacerlo (#40). */
+    onDelete: suspend (HistoryEntry) -> ScanHistory.Deleted?,
+    onUndoDelete: (ScanHistory.Deleted) -> Unit,
     onClear: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -62,34 +72,48 @@ fun HistoryScreen(
     var query by rememberSaveable { mutableStateOf("") }
     // Por id, para que los diálogos sigan abiertos al girar el móvil (#35).
     var renamingId by rememberSaveable { mutableStateOf<String?>(null) }
-    var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     var clearing by rememberSaveable { mutableStateOf(false) }
     val renaming = entries.find { it.id == renamingId }
-    val deleting = entries.find { it.id == deletingId }
     val shown = ScanHistory.search(entries, query)
+    // Borrar no pregunta: se avisa unos segundos con «Deshacer» (#40). Vaciar el historial sí.
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val res = LocalResources.current
+    val delete = { entry: HistoryEntry ->
+        scope.launch {
+            val deleted = onDelete(entry) ?: return@launch
+            snackbar.currentSnackbarData?.dismiss()
+            val result = snackbar.showSnackbar(res.getString(R.string.history_deleted), res.getString(R.string.history_undo),
+                duration = SnackbarDuration.Long)
+            if (result == SnackbarResult.ActionPerformed) onUndoDelete(deleted)
+        }
+    }
 
-    Column(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(pluralStringResource(R.plurals.history_title, entries.size, entries.size),
-                style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            if (entries.isNotEmpty()) TextButton(onClick = { clearing = true }) { Text(stringResource(R.string.history_clear)) }
-            TextButton(onClick = onBack) { Text(stringResource(R.string.history_back)) }
-        }
-        if (entries.isEmpty()) {
-            Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.bodyMedium)
-            return@Column
-        }
-        OutlinedTextField(
-            value = query, onValueChange = { query = it }, singleLine = true,
-            label = { Text(stringResource(R.string.history_search)) }, modifier = Modifier.fillMaxWidth(),
-        )
-        if (shown.isEmpty()) Text(stringResource(R.string.history_no_match), style = MaterialTheme.typography.bodyMedium)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(shown, key = { it.id }) { entry ->
-                HistoryRow(entry, thumbnail(entry.id), onOpen = { onOpen(entry) },
-                    onRename = { renamingId = entry.id }, onDelete = { deletingId = entry.id })
+    Box(modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(pluralStringResource(R.plurals.history_title, entries.size, entries.size),
+                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (entries.isNotEmpty()) TextButton(onClick = { clearing = true }) { Text(stringResource(R.string.history_clear)) }
+                TextButton(onClick = onBack) { Text(stringResource(R.string.history_back)) }
+            }
+            if (entries.isEmpty()) {
+                Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.bodyMedium)
+                return@Column
+            }
+            OutlinedTextField(
+                value = query, onValueChange = { query = it }, singleLine = true,
+                label = { Text(stringResource(R.string.history_search)) }, modifier = Modifier.fillMaxWidth(),
+            )
+            if (shown.isEmpty()) Text(stringResource(R.string.history_no_match), style = MaterialTheme.typography.bodyMedium)
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(shown, key = { it.id }) { entry ->
+                    HistoryRow(entry, thumbnail(entry.id), onOpen = { onOpen(entry) },
+                        onRename = { renamingId = entry.id }, onDelete = { delete(entry) })
+                }
             }
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 
     renaming?.let { entry ->
@@ -105,16 +129,6 @@ fun HistoryScreen(
                 TextButton(onClick = { onRename(entry, label); renamingId = null }) { Text(stringResource(R.string.history_save)) }
             },
             dismissButton = { TextButton(onClick = { renamingId = null }) { Text(stringResource(R.string.game_cancel)) } },
-        )
-    }
-    deleting?.let { entry ->
-        AlertDialog(
-            onDismissRequest = { deletingId = null },
-            title = { Text(stringResource(R.string.history_delete_title)) },
-            confirmButton = {
-                TextButton(onClick = { onDelete(entry); deletingId = null }) { Text(stringResource(R.string.history_delete)) }
-            },
-            dismissButton = { TextButton(onClick = { deletingId = null }) { Text(stringResource(R.string.game_cancel)) } },
         )
     }
     if (clearing) {

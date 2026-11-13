@@ -67,10 +67,25 @@ class ScanHistory(private val dir: File) {
         return new
     }
 
+    /** Lo que hace falta para deshacer un borrado: la entrada y su miniatura (#40). */
+    class Deleted(val entry: HistoryEntry, val thumbnail: ByteArray?)
+
     @Synchronized
-    fun delete(id: String) {
-        write(entries().filter { it.id != id })
+    fun delete(id: String): Deleted? {
+        val all = entries()
+        val entry = all.find { it.id == id } ?: return null
+        val thumb = thumbnail(id).takeIf { it.exists() }?.readBytes()
+        write(all - entry)
         thumbnail(id).delete()
+        return Deleted(entry, thumb)
+    }
+
+    @Synchronized
+    fun restore(deleted: Deleted) {
+        val all = entries()
+        if (all.any { it.id == deleted.entry.id }) return
+        deleted.thumbnail?.let { thumbnail(deleted.entry.id).writeBytes(it) }
+        write((all + deleted.entry).sortedByDescending { it.createdAt })
     }
 
     @Synchronized

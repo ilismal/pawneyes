@@ -266,9 +266,16 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun delete(id: String) = viewModelScope.launch {
+    /** Borra una entrada al momento; lo que devuelve sirve para deshacerlo con [restore]. */
+    suspend fun delete(id: String): ScanHistory.Deleted? {
         if (currentEntryId == id) state = ScanState.Idle
-        withContext(Dispatchers.IO) { history.delete(id) }
+        val deleted = withContext(Dispatchers.IO) { history.delete(id) }
+        historyEntries = withContext(Dispatchers.IO) { history.entries() }
+        return deleted
+    }
+
+    fun restore(deleted: ScanHistory.Deleted) = viewModelScope.launch {
+        withContext(Dispatchers.IO) { history.restore(deleted) }
         historyEntries = withContext(Dispatchers.IO) { history.entries() }
     }
 

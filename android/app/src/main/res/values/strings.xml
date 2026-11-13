@@ -149,7 +149,8 @@
     <string name="history_label_hint">Por ejemplo: Capablanca, pág. 37</string>
     <string name="history_save">Guardar</string>
     <string name="history_delete">Borrar</string>
-    <string name="history_delete_title">¿Borrar este escaneo del historial?</string>
+    <string name="history_deleted">Escaneo borrado</string>
+    <string name="history_undo">Deshacer</string>
     <string name="history_card_title">Escaneo del historial</string>
     <string name="history_card_hint">Lo que cambies en el tablero se guarda en esta entrada mientras veas esta tarjeta.</string>
     <string name="history_saved_hint">Se guarda en el historial con tus correcciones (menú ⋮).</string>

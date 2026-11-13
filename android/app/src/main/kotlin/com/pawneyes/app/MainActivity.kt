@@ -285,6 +285,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     },
                     onRename = { entry, label -> vm.rename(entry.id, label) },
                     onDelete = { vm.delete(it.id) },
+                    onUndoDelete = vm::restore,
                     onClear = { vm.clearHistory() },
                     onBack = { history = false },
                     modifier = Modifier.padding(padding),

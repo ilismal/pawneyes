@@ -139,4 +139,23 @@ class ScanHistoryTest {
         }
         assertTrue(h.entries().isEmpty())
     }
+
+    @Test
+    fun deleteCanBeUndone() {
+        val h = ScanHistory(dir)
+        val a = h.add(start, true, jpeg, now = 1000)
+        h.update(a.id) { it.copy(label = "Kubbel") }
+        val b = h.add(start, false, jpeg, now = 2000)
+        val deleted = h.delete(a.id)!!
+        assertEquals(listOf(b.id), h.entries().map { it.id })
+        assertFalse(h.thumbnail(a.id).exists())
+
+        h.restore(deleted)
+        assertEquals(listOf(b.id, a.id), h.entries().map { it.id })
+        assertEquals("Kubbel", h.entries().last().label)
+        assertTrue(h.thumbnail(a.id).readBytes().contentEquals(jpeg))
+        h.restore(deleted)  // dos veces no la duplica
+        assertEquals(2, h.entries().size)
+        assertNull(h.delete("no-existe"))
+    }
 }
