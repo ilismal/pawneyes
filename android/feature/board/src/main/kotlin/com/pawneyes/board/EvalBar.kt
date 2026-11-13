@@ -2,6 +2,7 @@ package com.pawneyes.board
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -26,7 +28,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun EvalBar(white: Float, flipped: Boolean, modifier: Modifier = Modifier) {
     val share by animateFloatAsState(white.coerceIn(0f, 1f), label = "evaluación")
-    Canvas(modifier.clip(RoundedCornerShape(4.dp))) {
+    val shape = RoundedCornerShape(4.dp)
+    // Con borde: si no, en modo claro la parte blanca se confunde con el fondo.
+    Canvas(modifier.clip(shape).border(1.dp, MaterialTheme.colorScheme.outline, shape)) {
         val whiteHeight = size.height * share
         drawRect(BLACK)
         val top = if (flipped) 0f else size.height - whiteHeight
