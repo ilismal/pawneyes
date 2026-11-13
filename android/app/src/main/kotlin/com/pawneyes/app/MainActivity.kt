@@ -241,6 +241,12 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         ) { padding ->
             val analysis by analysisVm.analysis.collectAsStateWithLifecycle()
             val arrows = if (analysisVm.enabled) analysis.bestArrow(shown) else emptyList()
+            // Barra de evaluación (#46) con el análisis activo. Mientras el motor empieza con la
+            // posición nueva se queda con el último valor, para que no salte al centro y vuelva.
+            val share = analysis?.takeIf { it.position == shown }?.lines?.firstOrNull()?.whiteShare(shown.sideToMove)
+            var lastShare by remember { mutableStateOf(0.5f) }
+            LaunchedEffect(share) { share?.let { lastShare = it } }
+            val evalBar = (share ?: lastShare).takeIf { analysisVm.enabled }
             val panel: @Composable () -> Unit = {
                 if (analysisVm.available) {
                     AnalysisPanel(
@@ -351,6 +357,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     explore,
                     flipped = editor.flipped,
                     arrows = arrows,
+                    evalBar = evalBar,
                     onStep = { exploration = explore.at(it) },
                     onEdit = {
                         editor.load(explore.position)
@@ -383,7 +390,7 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                 // Con la tarjeta del escáner a la vista, tocar una casilla dudosa ofrece las opciones del modelo.
                 val done = vm.state as? ScanState.Done
                 val alternatives = done?.let { d -> { sq: Int -> d.result.alternatives(sq, d.flipped) } }
-                BoardEditor(editor, Modifier.padding(padding), arrows = arrows, belowBoard = panel, shareButton = share,
+                BoardEditor(editor, Modifier.padding(padding), arrows = arrows, evalBar = evalBar, belowBoard = panel, shareButton = share,
                     alternativesFor = alternatives) {
                     ScanPanel(vm.state, editor.marked.size, onDismiss = vm::dismiss,
                         onSaveForTraining = { vm.saveForTraining(editor.position.toFen()) },

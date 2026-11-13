@@ -199,6 +199,8 @@ fun BoardEditor(
     state: BoardEditorState,
     modifier: Modifier = Modifier,
     arrows: List<Pair<Int, Int>> = emptyList(),
+    /** Ventaja de las blancas para la barra de evaluación (0–1); null, sin barra. */
+    evalBar: Float? = null,
     belowBoard: @Composable () -> Unit = {},
     shareButton: @Composable () -> Unit = {},
     /** Opciones del escáner para una casilla dudosa (#21); null si no hay lectura que consultar. */
@@ -231,18 +233,20 @@ fun BoardEditor(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         header()
-        ChessBoard(state.position, Modifier.fillMaxWidth(), state.flipped, state.marked, arrows,
-            highlighted = setOfNotNull(state.selected), onSquareClick = onSquare,
-            onSquareLongClick = { sq ->
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                state.deselect()
-                editing = sq
-            },
-            onDragStart = { state.deselect(); true },
-            onDrop = { from, to ->
-                if (to != null && to != from) confirm()
-                state.move(from, to)
-            })
+        BoardWithEvalBar(evalBar, state.flipped) { boardModifier ->
+            ChessBoard(state.position, boardModifier, state.flipped, state.marked, arrows,
+                highlighted = setOfNotNull(state.selected), onSquareClick = onSquare,
+                onSquareLongClick = { sq ->
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    state.deselect()
+                    editing = sq
+                },
+                onDragStart = { state.deselect(); true },
+                onDrop = { from, to ->
+                    if (to != null && to != from) confirm()
+                    state.move(from, to)
+                })
+        }
         belowBoard()
         SideToMove(state)  // justo bajo el tablero: es lo primero que hay que decidir tras escanear
         PiecePalette(state)

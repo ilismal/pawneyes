@@ -24,6 +24,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.pawneyes.board.BoardWithEvalBar
 import com.pawneyes.board.ChessBoard
 import com.pawneyes.chess.Line
 import com.pawneyes.chess.Position
@@ -54,6 +55,7 @@ fun LineExplorer(
     exploration: Exploration,
     flipped: Boolean,
     arrows: List<Pair<Int, Int>>,
+    evalBar: Float?,
     onStep: (Int) -> Unit,
     onEdit: () -> Unit,
     onClose: () -> Unit,
@@ -70,13 +72,15 @@ fun LineExplorer(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(stringResource(R.string.explore_title), style = MaterialTheme.typography.titleSmall)
-        ChessBoard(
-            exploration.position,
-            Modifier.fillMaxWidth(),
-            flipped = flipped,
-            arrows = arrows,
-            highlighted = last?.let { setOf(it.from, it.to) } ?: emptySet(),
-        )
+        BoardWithEvalBar(evalBar, flipped) { boardModifier ->
+            ChessBoard(
+                exploration.position,
+                boardModifier,
+                flipped = flipped,
+                arrows = arrows,
+                highlighted = last?.let { setOf(it.from, it.to) } ?: emptySet(),
+            )
+        }
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),

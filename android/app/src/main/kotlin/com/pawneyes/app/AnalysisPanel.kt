@@ -52,6 +52,18 @@ fun EngineLine.whiteScore(sideToMove: Side): String {
     return (if (pawns >= 0) "+" else "−") + text
 }
 
+/**
+ * Ventaja de las blancas de 0 a 1, para la barra de evaluación (#46). Con la curva de
+ * probabilidad de ganar de Lichess: un peón ya se nota y diez no salen de la barra.
+ */
+fun EngineLine.whiteShare(sideToMove: Side): Float {
+    val sign = if (sideToMove == Side.WHITE) 1 else -1
+    mate?.let { return if (it * sign > 0) 1f else 0f }
+    val cpWhite = (cp ?: 0) * sign
+    val chances = 2 / (1 + kotlin.math.exp(-0.00368208 * cpWhite)) - 1
+    return (0.5 + chances / 2).toFloat()
+}
+
 @Composable
 private fun headline(line: EngineLine, sideToMove: Side): String {
     val mate = line.mate ?: return line.whiteScore(sideToMove)
