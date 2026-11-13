@@ -64,8 +64,9 @@
   quitar la de una casilla con una pulsación larga, turno, enroques, FEN,
   deshacer, avisos de posiciones imposibles (reyes que faltan, peones en la 1ª fila, jaque al
   bando que no mueve…).
-- **Análisis con Stockfish 16** dentro de la app: evaluación, las tres mejores líneas en notación
-  algebraica (con letras españolas, R D T A C, o inglesas) y una flecha con la mejor jugada.
+- **Análisis con Stockfish 16** dentro de la app: evaluación (también en una barra junto al
+  tablero), las tres mejores líneas en notación algebraica (con letras españolas, R D T A C, o
+  inglesas) y una flecha con la mejor jugada.
 - **Recorrer las líneas** jugada a jugada; el motor sigue analizando la posición que estás viendo.
 - **Jugadas del libro**: escribe o pega una línea en notación descriptiva («1. P4R, P4R 2. C3AR,
   C3AD», «C(3A)×D») o algebraica y recórrela desde la posición del diagrama.
