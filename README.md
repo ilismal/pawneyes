@@ -27,7 +27,7 @@
 > completas y fiables.
 
 <p align="center">
-  <img src="docs/screenshots/01-escaneo-y-analisis.png" alt="Diagrama escaneado y analizado" width="260">
+  <img src="docs/screenshots/01-escaneo-y-analisis.png" alt="Diagrama escaneado y analizado, con la barra de evaluación" width="260">
   &nbsp;
   <img src="docs/screenshots/02-explorar-linea.png" alt="Recorriendo una línea de Stockfish" width="260">
   &nbsp;
@@ -36,9 +36,9 @@
 <p align="center">
   <img src="docs/screenshots/04-ejercicio.png" alt="Modo ejercicio: jugada correcta" width="260">
   &nbsp;
-  <img src="docs/screenshots/05-jugar-eleccion.png" alt="Elegir bando y rival para jugar" width="260">
+  <img src="docs/screenshots/05-jugar-eleccion.png" alt="Elegir bando, rival y reloj para jugar" width="260">
   &nbsp;
-  <img src="docs/screenshots/06-partida.png" alt="Partida contra Maia" width="260">
+  <img src="docs/screenshots/06-partida.png" alt="Partida contra Maia con reloj" width="260">
 </p>
 <p align="center">
   <img src="docs/screenshots/07-varios-diagramas.png" alt="Elegir entre los diagramas de una página" width="260">
@@ -46,6 +46,9 @@
   <img src="docs/screenshots/08-jugadas-del-libro.png" alt="Jugadas del libro en notación descriptiva" width="260">
   &nbsp;
   <img src="docs/screenshots/09-ajustes.png" alt="Ajustes: colores, piezas y notación" width="260">
+</p>
+<p align="center">
+  <img src="docs/screenshots/10-historial.png" alt="Historial con escaneos etiquetados y una partida guardada" width="260">
 </p>
 
 ## Qué hace
