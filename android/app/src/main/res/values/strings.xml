@@ -118,35 +118,35 @@
         <item quantity="one">Partida · %1$d jugada</item>
         <item quantity="other">Partida · %1$d jugadas</item>
     </plurals>
-    <string name="history_open">Historial de escaneos (%1$d)</string>
+    <string name="history_open">Historial (%1$d)</string>
     <string name="history_export">Exportar historial</string>
     <string name="history_import">Importar historial</string>
     <string name="history_exported">Historial exportado.</string>
     <string name="history_export_failed">No se ha podido exportar el historial.</string>
     <string name="history_import_failed">No se ha podido importar: el archivo no es un historial exportado desde Pawneyes.</string>
     <plurals name="history_imported">
-        <item quantity="one">Importado %1$d escaneo.</item>
-        <item quantity="other">Importados %1$d escaneos.</item>
+        <item quantity="one">Importada %1$d entrada.</item>
+        <item quantity="other">Importadas %1$d entradas.</item>
     </plurals>
     <plurals name="history_import_nothing">
-        <item quantity="one">No había escaneos nuevos: ya estaba en el historial.</item>
-        <item quantity="other">No había escaneos nuevos: los %1$d ya estaban en el historial.</item>
+        <item quantity="one">No había nada nuevo: ya estaba en el historial.</item>
+        <item quantity="other">No había nada nuevo: las %1$d entradas ya estaban en el historial.</item>
     </plurals>
     <plurals name="history_import_present">
         <item quantity="one">%1$d ya estaba en el historial.</item>
         <item quantity="other">%1$d ya estaban en el historial.</item>
     </plurals>
     <plurals name="history_title">
-        <item quantity="one">Historial · %1$d escaneo</item>
-        <item quantity="other">Historial · %1$d escaneos</item>
+        <item quantity="one">Historial · %1$d entrada</item>
+        <item quantity="other">Historial · %1$d entradas</item>
     </plurals>
     <string name="history_back">Volver</string>
     <string name="history_clear">Borrar todo</string>
     <plurals name="history_clear_title">
-        <item quantity="one">¿Borrar %1$d escaneo del historial?</item>
-        <item quantity="other">¿Borrar los %1$d escaneos del historial?</item>
+        <item quantity="one">¿Borrar %1$d entrada del historial?</item>
+        <item quantity="other">¿Borrar las %1$d entradas del historial?</item>
     </plurals>
-    <string name="history_empty">Aún no hay escaneos. Cada vez que escanees un diagrama se guardará aquí, con tus correcciones.</string>
+    <string name="history_empty">Aún no hay nada. Cada vez que escanees un diagrama se guardará aquí, con tus correcciones; también puedes guardar las partidas que juegues.</string>
     <string name="history_search">Buscar por etiqueta (libro, página…)</string>
     <string name="history_no_match">Ninguna etiqueta coincide.</string>
     <string name="history_no_label">Sin etiqueta</string>
@@ -160,7 +160,7 @@
     <string name="history_label_hint">Por ejemplo: Capablanca, pág. 37</string>
     <string name="history_save">Guardar</string>
     <string name="history_delete">Borrar</string>
-    <string name="history_deleted">Escaneo borrado</string>
+    <string name="history_deleted">Borrado del historial</string>
     <string name="history_undo">Deshacer</string>
     <string name="history_card_title">Escaneo del historial</string>
     <string name="history_card_hint">Lo que cambies en el tablero se guarda en esta entrada mientras veas esta tarjeta.</string>

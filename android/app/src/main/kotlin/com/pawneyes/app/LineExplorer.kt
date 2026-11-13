@@ -3,6 +3,7 @@ package com.pawneyes.app
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -108,7 +109,8 @@ fun LineExplorer(
             maxLines = 1,
         )
         analysisPanel()
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // FlowRow: en pantallas estrechas «Compartir» pasa a la línea siguiente en vez de partirse.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onClose) { Text(stringResource(R.string.explore_back)) }
             Button(onClick = onEdit) { Text(stringResource(R.string.explore_edit)) }
             ShareButton(onSharePgn, onShareImage)
