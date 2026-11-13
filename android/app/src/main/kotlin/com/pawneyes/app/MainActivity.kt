@@ -282,10 +282,21 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                     thumbnail = vm::thumbnailFile,
                     onOpen = { entry ->
                         scope.launch {
-                            vm.open(entry)
-                            editor.load(com.pawneyes.chess.Position.fromFen(entry.fen))
-                            editor.flipped = entry.flipped
-                            exploration = null
+                            val start = com.pawneyes.chess.Position.fromFen(entry.fen)
+                            if (entry.isGame) {
+                                // Una partida guardada (#47) se recorre jugada a jugada desde el final.
+                                // No es un escaneo: el editor no guarda cambios en ella.
+                                vm.dismiss()
+                                editor.load(start)
+                                editor.flipped = entry.flipped
+                                val line = Line(start, entry.moves)
+                                exploration = Exploration(line, line.size)
+                            } else {
+                                vm.open(entry)
+                                editor.load(start)
+                                editor.flipped = entry.flipped
+                                exploration = null
+                            }
                             history = false
                         }
                     },
@@ -323,6 +334,14 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         gameVm.exit()
                     },
                     onExit = gameVm::exit,
+                    saved = gameVm.saved,
+                    onSave = { label ->
+                        scope.launch {
+                            val id = vm.saveGame(gameVm.savedId, game.start, game.moves,
+                                gameVm.human == com.pawneyes.chess.Side.BLACK, label, settings.style)
+                            gameVm.markSaved(id, game.moves.size)
+                        }
+                    },
                     shareButton = {
                         val last = game.moves.lastOrNull()
                         ShareButton(

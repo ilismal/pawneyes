@@ -107,6 +107,12 @@
     <string name="game_restart">Empezar de nuevo</string>
     <string name="game_analyse">Analizar esta posición</string>
     <string name="game_exit">Salir</string>
+    <string name="game_save">Guardar en el historial</string>
+    <string name="game_saved">Guardada en el historial</string>
+    <plurals name="history_game">
+        <item quantity="one">Partida · %1$d jugada</item>
+        <item quantity="other">Partida · %1$d jugadas</item>
+    </plurals>
     <string name="history_open">Historial de escaneos (%1$d)</string>
     <string name="history_export">Exportar historial</string>
     <string name="history_import">Importar historial</string>

@@ -158,4 +158,26 @@ class ScanHistoryTest {
         assertEquals(2, h.entries().size)
         assertNull(h.delete("no-existe"))
     }
+
+    @Test
+    fun gamesKeepTheirMovesThroughExportAndImport() {
+        val h = ScanHistory(dir)
+        val g = h.add(start, flipped = true, thumbnail = jpeg, now = 1000, label = "Contra Maia 1500 · 0-1",
+            moves = listOf("e2e4", "e7e5", "g1f3"))
+        h.add(start, false, jpeg, now = 2000)
+        assertTrue(h.entries().first { it.id == g.id }.isGame)
+        assertFalse(h.entries().first { it.id != g.id }.isGame)
+
+        val other = ScanHistory(Files.createTempDirectory("otro").toFile())
+        other.import(ByteArrayInputStream(exported(h)))
+        assertEquals(h.entries(), other.entries())
+        assertEquals(listOf("e2e4", "e7e5", "g1f3"), other.entries().first { it.id == g.id }.moves)
+    }
+
+    @Test
+    fun importSkipsGamesWithBadMoves() {
+        val index = """[{"id":"s1","createdAt":1,"fen":"$start","moves":["e2e4","rm -rf"]}]""".toByteArray()
+        val h = ScanHistory(dir)
+        assertEquals(0, h.import(ByteArrayInputStream(zip("historial.json" to index))).added)
+    }
 }

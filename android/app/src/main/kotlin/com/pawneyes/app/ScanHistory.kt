@@ -12,7 +12,11 @@ import java.util.zip.ZipOutputStream
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Un escaneo guardado: la miniatura del diagrama, la posición (con las correcciones) y una etiqueta. */
+/**
+ * Un escaneo guardado: la miniatura del diagrama, la posición (con las correcciones) y una etiqueta.
+ * O una partida jugada contra Stockfish o Maia (#47): `fen` es la posición de partida, `moves` sus
+ * jugadas en UCI y la miniatura, la posición final.
+ */
 data class HistoryEntry(
     val id: String,
     val createdAt: Long,
@@ -21,7 +25,10 @@ data class HistoryEntry(
     val label: String = "",
     /** El tablero se miraba desde las negras (impreso así en el libro). */
     val flipped: Boolean = false,
-)
+    val moves: List<String> = emptyList(),
+) {
+    val isGame: Boolean get() = moves.isNotEmpty()
+}
 
 /**
  * Historial de escaneos (#6): un índice JSON y una miniatura JPEG por escaneo, en
@@ -44,14 +51,21 @@ class ScanHistory(private val dir: File) {
 
     fun thumbnail(id: String): File = File(dir, "$id.jpg")
 
-    /** Guarda un escaneo nuevo; `thumbnail`: la miniatura ya codificada en JPEG. */
+    /** Guarda un escaneo (o una partida, con `moves`) nuevo; `thumbnail`: la miniatura ya en JPEG. */
     @Synchronized
-    fun add(fen: String, flipped: Boolean, thumbnail: ByteArray, now: Long = System.currentTimeMillis()): HistoryEntry {
+    fun add(
+        fen: String,
+        flipped: Boolean,
+        thumbnail: ByteArray,
+        now: Long = System.currentTimeMillis(),
+        label: String = "",
+        moves: List<String> = emptyList(),
+    ): HistoryEntry {
         val existing = entries()
         var id = "s$now"
         while (existing.any { it.id == id }) id += "b"
         thumbnail(id).writeBytes(thumbnail)
-        val entry = HistoryEntry(id, now, fen, flipped = flipped)
+        val entry = HistoryEntry(id, now, fen, label, flipped, moves)
         val kept = (listOf(entry) + existing).take(MAX_ENTRIES)
         (existing - kept.toSet()).forEach { thumbnail(it.id).delete() }
         write(kept)
@@ -135,6 +149,7 @@ class ScanHistory(private val dir: File) {
         val a = runCatching { JSONArray(json ?: throw NotAHistory()) }.getOrElse { throw NotAHistory() }
         val imported = (0 until a.length()).mapNotNull { i -> runCatching { parse(a.getJSONObject(i)) }.getOrNull() }
             .filter { ID.matches(it.id) && it.createdAt > 0 && runCatching { Position.fromFen(it.fen) }.isSuccess }
+            .filter { it.moves.size <= MAX_MOVES && it.moves.all(UCI::matches) }
             .distinctBy { it.id }
             .map { it.copy(label = it.label.trim().take(MAX_LABEL)) }
         val existing = entries()
@@ -151,13 +166,16 @@ class ScanHistory(private val dir: File) {
     class NotAHistory : IllegalArgumentException("no es un historial de Pawneyes")
 
     private fun parse(o: JSONObject) = HistoryEntry(o.getString("id"), o.getLong("createdAt"), o.getString("fen"),
-        o.optString("label"), o.optBoolean("flipped"))
+        o.optString("label"), o.optBoolean("flipped"),
+        o.optJSONArray("moves")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty())
 
     private fun toJson(entries: List<HistoryEntry>): String {
         val a = JSONArray()
         for (e in entries) {
-            a.put(JSONObject().put("id", e.id).put("createdAt", e.createdAt).put("fen", e.fen)
-                .put("label", e.label).put("flipped", e.flipped))
+            val o = JSONObject().put("id", e.id).put("createdAt", e.createdAt).put("fen", e.fen)
+                .put("label", e.label).put("flipped", e.flipped)
+            if (e.isGame) o.put("moves", JSONArray(e.moves))
+            a.put(o)
         }
         return a.toString()
     }
@@ -185,6 +203,8 @@ class ScanHistory(private val dir: File) {
         private const val MAX_INDEX_BYTES = 2 * 1024 * 1024
         private const val MAX_THUMBNAIL_BYTES = 512 * 1024
         private const val MAX_LABEL = 200
+        private const val MAX_MOVES = 2000
+        private val UCI = Regex("""[a-h][1-8][a-h][1-8][qrbn]?""")
         /** Los ids que pone [add]: «s» y la hora en milisegundos, con «b» si coinciden. */
         private val ID = Regex("""s\d{1,19}b{0,10}""")
 

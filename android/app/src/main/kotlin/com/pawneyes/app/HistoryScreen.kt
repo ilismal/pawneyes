@@ -145,7 +145,7 @@ fun HistoryScreen(
 
 @Composable
 private fun HistoryRow(entry: HistoryEntry, file: File, onOpen: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) {
-    val image by produceState<ImageBitmap?>(null, entry.id) {
+    val image by produceState<ImageBitmap?>(null, entry) {  // la de una partida cambia al guardarla otra vez
         value = withContext(Dispatchers.IO) { if (file.exists()) BitmapFactory.decodeFile(file.path)?.asImageBitmap() else null }
     }
     val position = remember(entry.fen) { runCatching { Position.fromFen(entry.fen) }.getOrNull() }
@@ -161,7 +161,11 @@ private fun HistoryRow(entry: HistoryEntry, file: File, onOpen: () -> Unit, onRe
                 else Text(stringResource(R.string.history_no_label), style = MaterialTheme.typography.titleSmall,
                     fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(DATE.format(Date(entry.createdAt)), style = MaterialTheme.typography.bodySmall)
-                position?.let { p ->
+                if (entry.isGame) {
+                    val n = (entry.moves.size + 1) / 2
+                    Text(pluralStringResource(R.plurals.history_game, n, n),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else position?.let { p ->
                     val pieces = p.board.count { it != null }
                     Text(stringResource(R.string.history_summary,
                         stringResource(if (p.sideToMove == Side.WHITE) R.string.side_white_short else R.string.side_black_short),

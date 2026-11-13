@@ -38,6 +38,16 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var error by mutableStateOf<String?>(null)
         private set
+    /** Entrada del historial donde se guardó esta partida y con cuántas jugadas (#47). */
+    var savedId by mutableStateOf<String?>(null)
+        private set
+    private var savedMoves by mutableStateOf(-1)
+    val saved: Boolean get() = savedId != null && savedMoves == game?.moves?.size
+
+    fun markSaved(id: String, moves: Int) {
+        savedId = id
+        savedMoves = moves
+    }
 
     private var maia: MaiaPlayer? = null
     private var job: Job? = null
@@ -49,6 +59,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         human = side
         opponent = rival
         error = null
+        savedId = null
+        savedMoves = -1
         game = Game(position)
         if (position.sideToMove != side) reply()
     }

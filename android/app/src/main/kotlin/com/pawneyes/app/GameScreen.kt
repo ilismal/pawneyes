@@ -91,6 +91,12 @@ private fun opponentName(o: Opponent): String = when (o) {
         ?: stringResource(R.string.game_title_stockfish_full)
 }
 
+/** El resultado como en un PGN: «1-0», «0-1» o «½-½». */
+private fun score(result: GameResult): String = when (result) {
+    is GameResult.Checkmate -> if (result.winner == Side.WHITE) "1-0" else "0-1"
+    else -> "½-½"
+}
+
 @Composable
 private fun resultText(result: GameResult, human: Side): String = when (result) {
     is GameResult.Checkmate -> stringResource(if (result.winner == human) R.string.game_won else R.string.game_lost)
@@ -113,6 +119,9 @@ fun GameScreen(
     onRestart: () -> Unit,
     onAnalyse: () -> Unit,
     onExit: () -> Unit,
+    /** Guardar en el historial (#47), con la etiqueta que se propone. */
+    saved: Boolean,
+    onSave: (label: String) -> Unit,
     shareButton: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -152,6 +161,10 @@ fun GameScreen(
             OutlinedButton(onClick = onRestart, enabled = game.moves.isNotEmpty()) { Text(stringResource(R.string.game_restart)) }
             OutlinedButton(onClick = onAnalyse, enabled = !thinking) { Text(stringResource(R.string.game_analyse)) }
             shareButton()
+            val label = opponentName(opponent) + (result?.let { " · " + score(it) } ?: "")
+            OutlinedButton(onClick = { onSave(label) }, enabled = game.moves.isNotEmpty() && !saved) {
+                Text(stringResource(if (saved) R.string.game_saved else R.string.game_save))
+            }
             OutlinedButton(onClick = onExit) { Text(stringResource(R.string.game_exit)) }
         }
     }

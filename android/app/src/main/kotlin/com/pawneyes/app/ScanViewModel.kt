@@ -287,6 +287,32 @@ class ScanViewModel(app: Application) : AndroidViewModel(app) {
 
     fun thumbnailFile(id: String): java.io.File = history.thumbnail(id)
 
+    /**
+     * Guarda una partida en el historial (#47), con la posición final de miniatura; si ya se
+     * guardó (`id`), actualiza sus jugadas. Devuelve el id de la entrada.
+     */
+    suspend fun saveGame(
+        id: String?,
+        start: com.pawneyes.chess.Position,
+        moves: List<com.pawneyes.chess.Move>,
+        flipped: Boolean,
+        label: String,
+        style: com.pawneyes.board.BoardStyle,
+    ): String {
+        val saved = withContext(Dispatchers.IO) {
+            val final = com.pawneyes.chess.Game(start, moves).position
+            val last = moves.lastOrNull()?.let { setOf(it.from, it.to) }.orEmpty()
+            val board = com.pawneyes.board.BoardImage.render(getApplication(), final, flipped, highlighted = last,
+                style = style, size = THUMBNAIL_PX)
+            val jpeg = java.io.ByteArrayOutputStream().also { board.compress(Bitmap.CompressFormat.JPEG, 85, it) }.toByteArray()
+            val uci = moves.map { it.uci }
+            id?.let { old -> history.update(old) { it.copy(moves = uci) }?.also { history.thumbnail(it.id).writeBytes(jpeg) } }
+                ?: history.add(start.toFen(), flipped, jpeg, label = label, moves = uci)
+        }
+        historyEntries = withContext(Dispatchers.IO) { history.entries() }
+        return saved.id
+    }
+
     /** Guarda el historial en `uri` (un documento creado con el selector del sistema). */
     suspend fun exportHistory(uri: Uri) = withContext(Dispatchers.IO) {
         val out = getApplication<Application>().contentResolver.openOutputStream(uri, "wt") ?: error("no se pudo escribir")
