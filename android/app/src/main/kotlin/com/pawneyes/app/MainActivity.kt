@@ -157,8 +157,8 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
         // El motor analiza lo que se ve: la posición del editor o la de la línea que se recorre.
         val shown = exploration?.position ?: editor.position
         LaunchedEffect(shown) { analysisVm.onPosition(shown) }
-        LifecycleEventEffect(Lifecycle.Event.ON_START) { analysisVm.setForeground(true) }
-        LifecycleEventEffect(Lifecycle.Event.ON_STOP) { analysisVm.setForeground(false) }
+        LifecycleEventEffect(Lifecycle.Event.ON_START) { analysisVm.setForeground(true); gameVm.setForeground(true) }
+        LifecycleEventEffect(Lifecycle.Event.ON_STOP) { analysisVm.setForeground(false); gameVm.setForeground(false) }
         var camera by rememberSaveable { mutableStateOf(false) }
         // Durante una partida el motor es del rival: el análisis se pausa.
         val playing = gameVm.game != null
@@ -317,9 +317,9 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                 })
             }
             if (playSetup) {
-                PlaySetupDialog(editor.position, onDismiss = { playSetup = false }, onPlay = { side, rival ->
+                PlaySetupDialog(editor.position, onDismiss = { playSetup = false }, onPlay = { side, rival, clock ->
                     playSetup = false
-                    gameVm.start(editor.position, side, rival)
+                    gameVm.start(editor.position, side, rival, clock)
                 })
             }
             if (game != null) {
@@ -334,6 +334,8 @@ private fun PawneyesApp(shared: MutableState<Uri?>) {
                         gameVm.exit()
                     },
                     onExit = gameVm::exit,
+                    clock = gameVm.clock,
+                    flagged = gameVm.flagged,
                     saved = gameVm.saved,
                     onSave = { label ->
                         scope.launch {

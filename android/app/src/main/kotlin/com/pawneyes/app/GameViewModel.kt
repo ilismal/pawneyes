@@ -1,6 +1,7 @@
 package com.pawneyes.app
 
 import android.app.Application
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,6 +16,7 @@ import com.pawneyes.maia.MaiaPlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -49,10 +51,21 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         savedMoves = moves
     }
 
+    /** Reloj de la partida (#49); null, sin reloj. */
+    var timeControl by mutableStateOf<TimeControl?>(null)
+        private set
+    var clock by mutableStateOf<Clock?>(null)
+        private set
+    /** El bando que se quedó sin tiempo: la partida ha terminado. */
+    var flagged by mutableStateOf<Side?>(null)
+        private set
+    private var foreground = true
+
     private var maia: MaiaPlayer? = null
     private var job: Job? = null
+    private var clockJob: Job? = null
 
-    fun start(position: Position, side: Side, rival: Opponent) {
+    fun start(position: Position, side: Side, rival: Opponent, timeControl: TimeControl? = null) {
         stopThinking()
         maia?.close()
         maia = (rival as? Opponent.Maia)?.let { MaiaPlayer.load(getApplication(), it.level) }
@@ -62,18 +75,52 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         savedId = null
         savedMoves = -1
         game = Game(position)
+        this.timeControl = timeControl
+        clock = timeControl?.let(Clock::of)
+        flagged = null
+        startClock()
         if (position.sideToMove != side) reply()
+    }
+
+    /** En segundo plano el reloj se para (también el del rival). */
+    fun setForeground(value: Boolean) {
+        foreground = value
+    }
+
+    private fun startClock() {
+        clockJob?.cancel()
+        if (clock == null) return
+        clockJob = viewModelScope.launch {
+            var last = SystemClock.elapsedRealtime()
+            while (isActive) {
+                delay(100)
+                val now = SystemClock.elapsedRealtime()
+                val g = game
+                val c = clock
+                if (g != null && c != null && g.result == null && flagged == null && foreground) {
+                    val next = c.spend(g.position.sideToMove, now - last)
+                    clock = next
+                    next.flagged?.let {
+                        flagged = it
+                        stopThinking()
+                    }
+                }
+                last = now
+            }
+        }
     }
 
     fun play(move: Move) {
         val g = game ?: return
-        if (thinking || g.result != null || g.position.sideToMove != human) return
+        if (thinking || g.result != null || flagged != null || g.position.sideToMove != human) return
         game = g.play(move)
+        clock = clock?.moved(human)
         if (game?.result == null) reply()
     }
 
     /** Deshace hasta que vuelva a tocar al usuario (su jugada y la respuesta del rival). */
     fun undo() {
+        if (clock != null) return  // con reloj no se deshace
         stopThinking()
         var g = game ?: return
         do {
@@ -84,11 +131,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun restart() {
-        game?.let { start(it.start, human, opponent) }
+        game?.let { start(it.start, human, opponent, timeControl) }
     }
 
     fun exit() {
         stopThinking()
+        clockJob?.cancel()
+        clock = null
+        flagged = null
         game = null
         maia?.close()
         maia = null
@@ -112,7 +162,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     is Opponent.Stockfish -> EngineHolder.get(getApplication()).bestMove(g.position, o.elo, THINK_MS)
                 }
-                if (move != null && game === g) game = g.play(move)
+                if (move != null && game === g && flagged == null) {
+                    game = g.play(move)
+                    clock = clock?.moved(g.position.sideToMove)
+                }
                 thinking = false
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e  // deshacer o salir: ya lo gestiona stopThinking()

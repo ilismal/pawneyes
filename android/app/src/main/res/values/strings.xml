@@ -107,6 +107,11 @@
     <string name="game_restart">Empezar de nuevo</string>
     <string name="game_analyse">Analizar esta posición</string>
     <string name="game_exit">Salir</string>
+    <string name="game_clock">Reloj</string>
+    <string name="game_no_clock">Sin reloj</string>
+    <string name="game_timeout_lost">Has perdido por tiempo.</string>
+    <string name="game_timeout_won">El rival se ha quedado sin tiempo: has ganado.</string>
+    <string name="game_timeout_draw">Tablas: se acabó el tiempo, pero el otro bando no puede dar mate.</string>
     <string name="game_save">Guardar en el historial</string>
     <string name="game_saved">Guardada en el historial</string>
     <plurals name="history_game">

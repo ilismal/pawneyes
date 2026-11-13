@@ -76,8 +76,9 @@
   posición, no se ofrece.
 - **Jugar desde cualquier posición** contra Stockfish (de 1350 de Elo a plena fuerza) o contra
   [Maia](https://maiachess.com) (1100–1900), una red entrenada con partidas de Lichess para jugar
-  como una persona de ese nivel, errores incluidos. Con deshacer y la partida en PGN; también se
-  puede guardar en el historial y repasarla después jugada a jugada.
+  como una persona de ese nivel, errores incluidos. Con reloj opcional (5+3, 10+5 o 15+10), con
+  deshacer (sin reloj) y la partida en PGN; también se puede guardar en el historial y repasarla
+  después jugada a jugada.
 - Copiar el FEN, abrir la posición en Lichess o compartirla como PGN o como imagen.
 - **Ajustes**: colores del tablero (madera, verde, azul u oscuro), cuatro juegos de piezas,
   coordenadas, notación con letras españolas o inglesas, y líneas y profundidad del análisis.
